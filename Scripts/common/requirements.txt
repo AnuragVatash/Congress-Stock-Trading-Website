@@ -1,0 +1,38 @@
+# Core dependencies for congressional trading document processing
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=6.0.0
+
+# Database
+sqlite3  # Built into Python
+
+# OCR capabilities (optional)
+pytesseract>=0.3.10
+Pillow>=10.0.0
+easyocr>=1.7.0
+
+# Template engine for prompts
+jinja2>=3.1.0
+
+# Web scraping
+selenium>=4.0.0
+webdriver-manager>=3.8.0
+
+# PDF processing
+PyMuPDF>=1.23.0
+
+# Rate limiting
+ratelimit>=2.2.1
+
+# Web application framework
+flask>=3.0.2
+
+# Logging and monitoring
+psutil>=5.9.0  # For system metrics
+
+# Testing (optional)
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Type hints
+typing-extensions>=4.0.0 

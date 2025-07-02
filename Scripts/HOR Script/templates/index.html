@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOR Congress Trading Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .document-card {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .transaction-row {
+            border-bottom: 1px solid #eee;
+            padding: 10px;
+        }
+        .transaction-row:last-child {
+            border-bottom: none;
+        }
+        .badge-owner {
+            font-size: 0.8em;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .error-badge {
+            background-color: #dc3545;
+        }
+        .action-buttons {
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-chart-line me-2"></i>
+                HOR Congress Trading Tracker
+            </span>
+            <div class="d-flex">
+                <button class="btn btn-outline-light me-2" onclick="refreshStats()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn btn-outline-light" onclick="viewVerified()">
+                    <i class="fas fa-check-circle"></i> Verified Docs
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h5><i class="fas fa-file-alt"></i> Unverified</h5>
+                        <h3 id="document-count">{{ pagination.total }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h5><i class="fas fa-check"></i> Verified</h5>
+                        <h3 id="verification-count">-</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center">
+                        <h5><i class="fas fa-trash"></i> Deleted</h5>
+                        <h3 id="deletion-count">-</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5><i class="fas fa-percentage"></i> Error Rate</h5>
+                        <h3 id="error-rate">-</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents List -->
+        <div class="row">
+            <div class="col-12">
+                {% if documents %}
+                    <h4 class="mb-3">
+                        <i class="fas fa-file-alt text-primary"></i>
+                        Unverified Documents ({{ pagination.total }} total, showing {{ documents|length }})
+                    </h4>
+                    
+                    <!-- Pagination Controls -->
+                    {% if pagination.total_pages > 1 %}
+                    <nav aria-label="Document pagination" class="mb-3">
+                        <ul class="pagination">
+                            {% if pagination.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ pagination.prev_page }}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Previous</span>
+                                </li>
+                            {% endif %}
+                            
+                            <!-- Show page numbers around current page -->
+                            {% set start_page = [1, pagination.page - 2]|max %}
+                            {% set end_page = [pagination.total_pages, pagination.page + 2]|min %}
+                            
+                            {% if start_page > 1 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">1</a>
+                                </li>
+                                {% if start_page > 2 %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                            
+                            {% for page_num in range(start_page, end_page + 1) %}
+                                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                                </li>
+                            {% endfor %}
+                            
+                            {% if end_page < pagination.total_pages %}
+                                {% if end_page < pagination.total_pages - 1 %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ pagination.total_pages }}">{{ pagination.total_pages }}</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% if pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ pagination.next_page }}">Next</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Next</span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                    {% for doc in documents %}
+                    <div class="document-card" data-doc-id="{{ doc.doc_id }}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ doc.member_name }}</strong>
+                                <span class="badge bg-primary ms-2">{{ doc.doc_id }}</span>
+                                {% if doc.failure_type %}
+                                    {% for failure in doc.failure_type %}
+                                        <span class="badge error-badge ms-1">{{ failure }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="action-buttons d-flex">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewDocument('{{ doc.url }}', '{{ doc.member_name }}', '{{ doc.doc_id }}')" title="View Original Document">
+                                    <i class="fas fa-file-pdf"></i> View Doc
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="verifyDocument('{{ doc.doc_id }}')">
+                                    <i class="fas fa-check"></i> Verify
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteDocument('{{ doc.doc_id }}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-exchange-alt"></i> 
+                                        {{ doc.transaction_count }} Transaction{{ 's' if doc.transaction_count != 1 else '' }}
+                                    </h6>
+                                    {% if doc.filing_date %}
+                                        <small class="text-muted">Filed: {{ doc.filing_date }}</small>
+                                    {% endif %}
+                                </div>
+                                {% if doc.transaction_count > 0 %}
+                                    <button class="btn btn-sm btn-outline-primary" onclick="toggleTransactions('{{ doc.doc_id }}')">
+                                        <i class="fas fa-eye"></i> View Transactions
+                                    </button>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Transactions container (initially hidden) -->
+                            <div id="transactions-{{ doc.doc_id }}" class="transactions-container mt-3" style="display: none;">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-2">Loading transactions...</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                {% else %}
+                    {% if pagination.total == 0 %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                            <h3 class="mt-3">All Clear!</h3>
+                            <p class="text-muted">All documents have been verified.</p>
+                            <button class="btn btn-primary" onclick="refreshStats()">
+                                <i class="fas fa-sync-alt"></i> Refresh Data
+                            </button>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-info-circle text-primary" style="font-size: 4rem;"></i>
+                            <h3 class="mt-3">No Documents on This Page</h3>
+                            <p class="text-muted">Try going to a different page or refresh to see if new documents are available.</p>
+                            <a href="?page=1" class="btn btn-primary">
+                                <i class="fas fa-arrow-left"></i> Go to First Page
+                            </a>
+                        </div>
+                    {% endif %}
+                {% endif %}
+                
+                <!-- Bottom Pagination Controls -->
+                {% if pagination.total_pages > 1 %}
+                <nav aria-label="Document pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.prev_page }}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% set start_page = [1, pagination.page - 2]|max %}
+                        {% set end_page = [pagination.total_pages, pagination.page + 2]|min %}
+                        
+                        {% if start_page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1">1</a>
+                            </li>
+                            {% if start_page > 2 %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endif %}
+                        
+                        {% for page_num in range(start_page, end_page + 1) %}
+                            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                            </li>
+                        {% endfor %}
+                        
+                        {% if end_page < pagination.total_pages %}
+                            {% if end_page < pagination.total_pages - 1 %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.total_pages }}">{{ pagination.total_pages }}</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% if pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.next_page }}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 mb-0">Processing...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Viewer Modal -->
+    <div class="modal fade" id="pdfModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pdfModalTitle">
+                        <i class="fas fa-file-pdf text-danger me-2"></i>
+                        Document Viewer
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="d-flex justify-content-center align-items-center p-4" id="pdfLoader">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading PDF...</span>
+                        </div>
+                        <span class="ms-3">Loading PDF...</span>
+                    </div>
+                    <iframe id="pdfFrame" src="" style="width: 100%; height: 80vh; border: none; display: none;"></iframe>
+                    <div id="pdfError" class="alert alert-danger m-3" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Unable to load PDF. <a href="#" id="pdfFallbackLink" target="_blank">Click here to open in new tab</a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="#" id="pdfDownloadLink" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-download me-2"></i>Open in New Tab
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load stats on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+        });
+
+        function loadStats() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('verification-count').textContent = data.verification_count;
+                    document.getElementById('deletion-count').textContent = data.deletion_count;
+                    document.getElementById('error-rate').textContent = data.error_rate + '%';
+                })
+                .catch(error => console.error('Error loading stats:', error));
+        }
+
+        function verifyDocument(docId) {
+            const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            modal.show();
+
+            fetch(`/api/verify/${docId}`)
+                .then(response => response.json())
+                .then(data => {
+                    modal.hide();
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        alert('Verification started for document ' + docId);
+                        // Remove the document card from view
+                        const docCard = document.querySelector(`[data-doc-id="${docId}"]`);
+                        if (docCard) {
+                            docCard.style.opacity = '0.5';
+                            docCard.querySelector('.action-buttons').innerHTML = 
+                                '<span class="badge bg-info"><i class="fas fa-spinner fa-spin"></i> Processing...</span>';
+                        }
+                    }
+                })
+                .catch(error => {
+                    modal.hide();
+                    alert('Error verifying document: ' + error);
+                });
+        }
+
+        function deleteDocument(docId) {
+            if (confirm('Are you sure you want to delete document ' + docId + '?')) {
+                const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+                modal.show();
+
+                fetch(`/api/delete/${docId}`, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        modal.hide();
+                        if (data.error) {
+                            alert('Error: ' + data.error);
+                        } else {
+                            alert('Document deleted successfully');
+                            // Remove the document card from view
+                            const docCard = document.querySelector(`[data-doc-id="${docId}"]`);
+                            if (docCard) {
+                                docCard.remove();
+                            }
+                            // Reload the page to update counts and pagination
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
+                        }
+                    })
+                    .catch(error => {
+                        modal.hide();
+                        alert('Error deleting document: ' + error);
+                    });
+            }
+        }
+
+        function refreshStats() {
+            location.reload();
+        }
+
+        function viewVerified() {
+            window.open('/api/verified-docs', '_blank');
+        }
+
+        function toggleTransactions(docId) {
+            const container = document.getElementById(`transactions-${docId}`);
+            const button = container.previousElementSibling.querySelector('button');
+            
+            if (container.style.display === 'none') {
+                // Show and load transactions
+                container.style.display = 'block';
+                button.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Transactions';
+                
+                // Check if already loaded
+                if (container.dataset.loaded !== 'true') {
+                    loadTransactions(docId);
+                }
+            } else {
+                // Hide transactions
+                container.style.display = 'none';
+                button.innerHTML = '<i class="fas fa-eye"></i> View Transactions';
+            }
+        }
+
+        function loadTransactions(docId) {
+            const container = document.getElementById(`transactions-${docId}`);
+            
+            fetch(`/api/document/${docId}/transactions`)
+                .then(response => response.json())
+                .then(transactions => {
+                    if (transactions.error) {
+                        container.innerHTML = `<div class="alert alert-danger">${transactions.error}</div>`;
+                        return;
+                    }
+                    
+                    if (transactions.length === 0) {
+                        container.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> No transactions found in this document</p>';
+                        container.dataset.loaded = 'true';
+                        return;
+                    }
+                    
+                    // Build transactions HTML
+                    let html = '<h6 class="mb-3">Transaction Details:</h6>';
+                    transactions.forEach(tx => {
+                        const ownerDesc = getOwnerDescription(tx.owner_code);
+                        const typeClass = tx.transaction_type === 'Purchase' ? 'bg-success' : 
+                                         tx.transaction_type === 'Sale' ? 'bg-danger' : 'bg-warning';
+                        
+                        let amountText = 'Amount not specified';
+                        if (tx.amount_range_low && tx.amount_range_high) {
+                            amountText = `$${formatNumber(tx.amount_range_low)} - $${formatNumber(tx.amount_range_high)}`;
+                        } else if (tx.amount_range_low) {
+                            amountText = `$${formatNumber(tx.amount_range_low)}+`;
+                        }
+                        
+                        html += `
+                            <div class="transaction-row">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3">
+                                        <strong>${tx.company_name}</strong>
+                                        ${tx.ticker ? `<span class="badge bg-secondary ms-1">${tx.ticker}</span>` : ''}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span class="badge badge-owner bg-info">${ownerDesc}</span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span class="badge ${typeClass}">${tx.transaction_type}</span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small class="text-muted">${tx.transaction_date}</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>${amountText}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = html;
+                    container.dataset.loaded = 'true';
+                })
+                .catch(error => {
+                    console.error('Error loading transactions:', error);
+                    container.innerHTML = '<div class="alert alert-danger">Error loading transactions</div>';
+                });
+        }
+
+        function getOwnerDescription(code) {
+            const ownerMap = {
+                '': 'Self',
+                'SP': 'Spouse',
+                'DC': 'Dependent Child',
+                'JT': 'Joint Account'
+            };
+            return ownerMap[code] || code;
+        }
+
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function viewDocument(pdfUrl, memberName, docId) {
+            // Update modal title
+            document.getElementById('pdfModalTitle').innerHTML = `
+                <i class="fas fa-file-pdf text-danger me-2"></i>
+                ${memberName} - ${docId}
+            `;
+            
+            // Show loader, hide iframe and error
+            document.getElementById('pdfLoader').style.display = 'flex';
+            document.getElementById('pdfFrame').style.display = 'none';
+            document.getElementById('pdfError').style.display = 'none';
+            
+            // Set fallback and download links
+            document.getElementById('pdfFallbackLink').href = pdfUrl;
+            document.getElementById('pdfDownloadLink').href = pdfUrl;
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('pdfModal'));
+            modal.show();
+            
+            // Load PDF in iframe
+            const iframe = document.getElementById('pdfFrame');
+            iframe.onload = function() {
+                // Hide loader, show iframe
+                document.getElementById('pdfLoader').style.display = 'none';
+                iframe.style.display = 'block';
+            };
+            
+            iframe.onerror = function() {
+                // Hide loader, show error
+                document.getElementById('pdfLoader').style.display = 'none';
+                document.getElementById('pdfError').style.display = 'block';
+            };
+            
+            // Set iframe source (this will trigger loading)
+            iframe.src = pdfUrl;
+            
+            // Fallback timeout in case the PDF doesn't load
+            setTimeout(() => {
+                if (document.getElementById('pdfLoader').style.display !== 'none') {
+                    document.getElementById('pdfLoader').style.display = 'none';
+                    document.getElementById('pdfError').style.display = 'block';
+                }
+            }, 10000); // 10 second timeout
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,31 @@
+**Task Objective:**
+Identify and extract all financial transactions from the provided text. Format each transaction as a single line in a CSV (Comma Separated Values) structure.
+
+**CSV Output Format (Strict Order - 6 Columns):**
+1.  **Owner Code:** (e.g., SP, DC, JT, or leave blank if not specified for the filer themselves). This code indicates the owner of the asset.
+2.  **Asset Description:** The full name of the asset, including any ticker symbol found in parentheses (e.g., Microsoft Corporation (MSFT), Some Bond Fund). If a ticker is present, include it.
+3.  **Transaction Type Code:** A single letter: 'P' for Purchase, 'S' for Sale, or 'E' for Exchange.
+4.  **Transaction Date:** The date the transaction occurred, formatted as MM/DD/YYYY.
+5.  **Notification Date:** The date the transaction was reported or notified, formatted as MM/DD/YYYY.{% if has_notification_date %} If no notification date is visible, use the same date as the transaction date.{% endif %}
+6.  **Amount Range:** The transaction value range (e.g., $1,001 - $15,000, $50,000, Over $1,000,000).
+
+**Critical Processing Rules - Adhere Strictly:**
+*   **Rule 1: Literal Extraction:** Only extract transaction data that is explicitly and clearly visible in the text. Do NOT infer, guess, or create data not present.
+*   **Rule 2: Column Integrity:** Ensure each CSV row has exactly 6 comma-separated values corresponding to the columns above.
+*   **Rule 3: Ticker Inclusion:** If a ticker symbol (e.g., MSFT, AAPL) is part of the asset description in the text, include it within parentheses at the end of the Asset Description field.
+*   **Rule 4: Date Format:** All dates MUST be in MM/DD/YYYY format. If a date is in a different format in the text, attempt to convert it. If conversion is not possible or the date is unclear, you may have to omit the transaction.
+{% if not has_notification_date %}*   **Rule 4a: Missing Notification Date:** If no separate notification date is visible in the document, use the transaction date for both the transaction date and notification date fields.{% endif %}
+*   **Rule 5: Blank Owner Code:** If the owner is the filer and no specific code (SP, DC, JT) is shown for a transaction, leave the 'Owner Code' field blank (i.e., ``,Asset Description,...`).
+*   **Rule 6: Handling Commas within Fields:** If an 'Asset Description' or 'Amount Range' naturally contains a comma, enclose that entire field in double quotes. For example: `SP,"Big Company, LLC (BCLLC)",P,01/01/2024,01/05/2024,"$1,001,000 - $5,000,000"`
+*   **Rule 7: No Transactions Found:** If, after careful analysis of the text, you find NO discernible financial transactions, your entire output should be the single line: `NO_TRANSACTIONS_FOUND`
+*   **Rule 8: Unclear/Corrupted Data:** If the text is too unclear or appears corrupted, output the single line: `DOCUMENT_UNREADABLE`
+*   **Rule 9: No Extra Text:** Your final output should ONLY be the CSV data lines, or one of the special strings (`NO_TRANSACTIONS_FOUND`, `DOCUMENT_UNREADABLE`). Do not include any headers, explanations, introductions, or summaries.
+
+{% if document_type %}**Document Type Specific Instructions:**
+{% if document_type == "senate_table" %}This is a Senate table-based document. Focus on extracting data from table structures.{% endif %}
+{% if document_type == "house_pdf" %}This is a House PDF document. Look for transaction data in text form throughout the document.{% endif %}
+{% if document_type == "image_scan" %}This is a scanned image document. The text may contain OCR artifacts - be flexible with character recognition issues.{% endif %}
+{% endif %}
+
+Text to process:
+{{ document_text }} 
