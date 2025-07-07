@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model API_Requests {
+  request_id      Int       @id @default(autoincrement())
+  filing_id       Int
+  doc_id          String
+  generation_id   String?
+  model           String
+  max_tokens      Int
+  text_length     Int
+  approx_tokens   Int
+  finish_reason   String?
+  response_status Int?
+  error_message   String?
+  pdf_link        String?
+  raw_text        String?
+  llm_response    String?
+  created_at      DateTime? @default(now())
+  Filings         Filings   @relation(fields: [filing_id], references: [filing_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Assets {
+  asset_id     Int            @id @default(autoincrement())
+  company_name String
+  ticker       String?
+  created_at   DateTime?      @default(now())
+  Transactions Transactions[]
+
+  @@unique([company_name, ticker], map: "sqlite_autoindex_Assets_1")
+}
+
+model Filings {
+  filing_id    Int            @id @default(autoincrement())
+  member_id    Int
+  doc_id       String         @unique(map: "sqlite_autoindex_Filings_1")
+  url          String
+  filing_date  String?
+  verified     Boolean?       @default(false)
+  created_at   DateTime?      @default(now())
+  API_Requests API_Requests[]
+  Members      Members        @relation(fields: [member_id], references: [member_id], onDelete: NoAction, onUpdate: NoAction)
+  Transactions Transactions[]
+}
+
+model Members {
+  member_id  Int       @id @default(autoincrement())
+  name       String    @unique(map: "idx_members_name_nocase")
+  created_at DateTime? @default(now())
+  Filings    Filings[]
+}
+
+model Transactions {
+  transaction_id    Int       @id @default(autoincrement())
+  filing_id         Int
+  asset_id          Int
+  owner_code        String?
+  transaction_type  String
+  transaction_date  String?
+  amount_range_low  Int?
+  amount_range_high Int?
+  raw_llm_csv_line  String?
+  created_at        DateTime? @default(now())
+  Assets            Assets    @relation(fields: [asset_id], references: [asset_id], onDelete: NoAction, onUpdate: NoAction)
+  Filings           Filings   @relation(fields: [filing_id], references: [filing_id], onDelete: NoAction, onUpdate: NoAction)
+}
