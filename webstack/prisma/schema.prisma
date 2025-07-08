@@ -41,7 +41,7 @@ model Filings {
   member_id    Int
   doc_id       String         @unique(map: "sqlite_autoindex_Filings_1")
   url          String
-  filing_date  String?
+  filing_date DateTime? @map("filing_date")
   verified     Boolean?       @default(false)
   created_at   DateTime?      @default(now())
   API_Requests API_Requests[]
@@ -62,7 +62,7 @@ model Transactions {
   asset_id          Int
   owner_code        String?
   transaction_type  String
-  transaction_date  String?
+  transaction_date DateTime? @map("transaction_date")
   amount_range_low  Int?
   amount_range_high Int?
   raw_llm_csv_line  String?
