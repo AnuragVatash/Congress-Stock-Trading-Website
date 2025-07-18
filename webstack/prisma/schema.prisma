@@ -24,6 +24,9 @@ model API_Requests {
   llm_response    String?
   created_at      DateTime? @default(now())
   Filings         Filings   @relation(fields: [filing_id], references: [filing_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([filing_id])
+  @@index([created_at])
 }
 
 model Assets {
@@ -34,6 +37,8 @@ model Assets {
   Transactions Transactions[]
 
   @@unique([company_name, ticker], map: "sqlite_autoindex_Assets_1")
+  @@index([ticker])
+  @@index([company_name])
 }
 
 model Filings {
@@ -47,13 +52,27 @@ model Filings {
   API_Requests API_Requests[]
   Members      Members        @relation(fields: [member_id], references: [member_id], onDelete: NoAction, onUpdate: NoAction)
   Transactions Transactions[]
+
+  @@index([member_id])
+  @@index([filing_date])
+  @@index([created_at])
 }
 
 model Members {
   member_id  Int       @id @default(autoincrement())
   name       String    @unique(map: "idx_members_name_nocase")
+
+  photo_url  String?   // URL to the member's picture
+  party      String?   // e.g., 'Democrat', 'Republican'
+  state      String?   // e.g., 'California'
+  chamber    String?   // e.g., 'House', 'Senate'
   created_at DateTime? @default(now())
   Filings    Filings[]
+
+  @@index([party])
+  @@index([state])
+  @@index([chamber])
+  @@index([name])
 }
 
 model Transactions {
@@ -69,4 +88,36 @@ model Transactions {
   created_at        DateTime? @default(now())
   Assets            Assets    @relation(fields: [asset_id], references: [asset_id], onDelete: NoAction, onUpdate: NoAction)
   Filings           Filings   @relation(fields: [filing_id], references: [filing_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([filing_id])
+  @@index([asset_id])
+  @@index([transaction_date])
+  @@index([transaction_type])
+  @@index([amount_range_low])
+  @@index([amount_range_high])
+  @@index([created_at])
+}
+
+model StockPrices {
+  id          Int       @id @default(autoincrement())
+  ticker      String
+  date        DateTime  @map("price_date")
+  open        Float
+  high        Float
+  low         Float
+  close       Float
+  volume      BigInt
+  adj_open    Float?
+  adj_high    Float?
+  adj_low     Float?
+  adj_close   Float?
+  adj_volume  BigInt?
+  split_factor Float?   @default(1.0)
+  dividend    Float?    @default(0.0)
+  created_at  DateTime? @default(now())
+  updated_at  DateTime? @updatedAt
+
+  @@unique([ticker, date], map: "unique_ticker_date")
+  @@index([ticker])
+  @@index([date])
 }

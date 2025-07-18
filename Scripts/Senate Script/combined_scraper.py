@@ -19,6 +19,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from io import BytesIO
 import pickle
+import sys
+
+# Add parent directory to path to allow importing from 'common'
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from common import ocr_utils
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(threadName)s] - %(message)s')
@@ -248,11 +254,12 @@ def extract_text_from_images(driver, doc_id):
     """Extract text from image-based documents with pagination support."""
     all_text = ""
     page_count = 0
-    
+    image_urls = []
+
     try:
         while True:
             page_count += 1
-            logging.info(f"[{doc_id}] Processing page {page_count}")
+            logging.info(f"[{doc_id}] Looking for image on page {page_count}")
             
             # Look for filing image
             try:
@@ -260,95 +267,42 @@ def extract_text_from_images(driver, doc_id):
                     EC.presence_of_element_located((By.CLASS_NAME, "filingImage"))
                 )
                 img_url = img_element.get_attribute('src')
+                image_urls.append(img_url)
                 logging.info(f"[{doc_id}] Found image on page {page_count}: {img_url}")
                 
-                # Download and extract text from image
-                try:
-                    response = requests.get(img_url, timeout=30)
-                    response.raise_for_status()
-                    
-                    # For now, we'll use the image URL as text content
-                    # In a full implementation, you would use OCR here
-                    # Example: pytesseract.image_to_string(Image.open(BytesIO(response.content)))
-                    page_text = f"[IMAGE PAGE {page_count}] Image URL: {img_url}\n"
-                    all_text += page_text
-                    
-                    logging.info(f"[{doc_id}] Extracted text from page {page_count}")
-                    
-                except Exception as e:
-                    logging.error(f"[{doc_id}] Error downloading/processing image: {e}")
-                    page_text = f"[IMAGE PAGE {page_count}] Error processing image: {img_url}\n"
-                    all_text += page_text
-                
             except TimeoutException:
-                logging.info(f"[{doc_id}] No image found on page {page_count}")
+                logging.info(f"[{doc_id}] No more images found after page {page_count - 1}")
                 break
-            
-            # Look for next page button using the pagination structure
+
+            # Look for next page button
             try:
-                # First, try to find the pagination navigation
                 pagination_nav = driver.find_element(By.XPATH, "//nav[@aria-label='Page Navigation']")
-                
-                # Get all page links in the pagination
-                page_links = pagination_nav.find_elements(By.XPATH, ".//li[@class='page-item']/a[@class='page-link']")
-                
-                # Find the currently active page
                 current_page_element = pagination_nav.find_element(By.XPATH, ".//li[@class='page-item active']/a[@class='page-link']")
                 current_page_href = current_page_element.get_attribute('href')
                 current_page_num = int(current_page_href.split('#')[-1]) if '#' in current_page_href else 1
                 
-                # Look for the next page (current + 1)
                 next_page_num = current_page_num + 1
-                next_page_link = None
+                next_page_link = pagination_nav.find_element(By.XPATH, f".//a[@class='page-link' and contains(@href, '#{next_page_num}')]")
                 
-                for link in page_links:
-                    link_href = link.get_attribute('href')
-                    if f"#{next_page_num}" in link_href:
-                        next_page_link = link
-                        break
+                driver.execute_script("arguments[0].click();", next_page_link)
+                time.sleep(3)  # Wait for page to load
+                logging.info(f"[{doc_id}] Moved to page {next_page_num}")
                 
-                if next_page_link:
-                    # Click the next page
-                    driver.execute_script("arguments[0].click();", next_page_link)
-                    time.sleep(3)  # Wait for page to load
-                    logging.info(f"[{doc_id}] Moved to page {next_page_num}")
-                    
-                    # Wait for the new image to load
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CLASS_NAME, "filingImage"))
-                    )
-                else:
-                    logging.info(f"[{doc_id}] No next page found, reached end of document")
-                    break
-                    
             except NoSuchElementException:
-                # Fallback: try the original next button approach
-                try:
-                    next_button = driver.find_element(By.XPATH, "//a[.//span[contains(@class, 'sr-only') and text()='Next page']]")
-                    if next_button.is_enabled() and 'disabled' not in next_button.get_attribute('class'):
-                        driver.execute_script("arguments[0].click();", next_button)
-                        time.sleep(3)  # Wait for page to load
-                        logging.info(f"[{doc_id}] Moved to next page using fallback method")
-                        
-                        # Wait for the new image to load
-                        WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.CLASS_NAME, "filingImage"))
-                        )
-                    else:
-                        logging.info(f"[{doc_id}] Next button disabled, reached end")
-                        break
-                except NoSuchElementException:
-                    logging.info(f"[{doc_id}] No pagination found, single page document")
-                    break
-                    
+                logging.info(f"[{doc_id}] No more pagination found. End of document.")
+                break
             except Exception as e:
                 logging.error(f"[{doc_id}] Error navigating pagination: {e}")
                 break
     
     except Exception as e:
-        logging.error(f"[{doc_id}] Error in image text extraction: {e}")
+        logging.error(f"[{doc_id}] Error during image URL gathering: {e}")
     
-    logging.info(f"[{doc_id}] Completed image text extraction from {page_count} pages")
+    if image_urls:
+        logging.info(f"[{doc_id}] Found {len(image_urls)} images to process with OCR.")
+        all_text = ocr_utils.extract_text_from_image_list(image_urls, doc_id)
+
+    logging.info(f"[{doc_id}] Completed image text extraction from {len(image_urls)} pages, total chars: {len(all_text)}")
     return all_text
 
 def extract_text_from_page(driver, doc_id):
@@ -462,14 +416,15 @@ def process_document_worker():
                     
                     # Send to LLM for processing
                     try:
-                        # For table-based documents, call LLM API directly with text
+                        # For table-based documents and OCR'd PDFs, call LLM API directly with text
                         document_type = determine_document_type(doc_url)
                         
-                        if document_type == 'table':
-                            # Call LLM API directly with extracted table text
+                        if document_type == 'table' or document_type == 'pdf':
+                            # Call LLM API directly with extracted table text or OCR'd text
                             llm_response = llm.call_llm_api_with_text(extracted_text, member_data)
                         else:
-                            # For PDF documents, use the existing PDF processing
+                            # This case should ideally not be hit with current logic, but as a fallback:
+                            logging.warning(f"{thread_name}: Unknown document type '{document_type}' for {doc_id}, processing as text.")
                             text_bytes = extracted_text.encode('utf-8')
                             text_buffer = BytesIO(text_bytes)
                             llm_response = llm.scan_with_openrouter(text_buffer, member_data)
@@ -642,7 +597,7 @@ def scrape_all_ptr_links(force_rescrape=False):
                             logging.debug(f"Added link: {doc_id} - {member_name} ({document_type})")
                 
                 except Exception as e:
-                    logging.error(f"Error parsing row: {e}")
+                    logging.error(f"Error parsing row {i} on page {page_count}: {e}")
                     continue
             
             logging.info(f"Page {page_count}: Found {len(rows)} rows, total links: {len(all_links)}")
