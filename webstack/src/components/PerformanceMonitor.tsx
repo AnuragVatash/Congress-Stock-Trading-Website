@@ -28,30 +28,12 @@ export default function PerformanceMonitor({ componentName, enabled = false }: P
     };
   });
 
-  // Monitor input event handler performance
-  const monitorInputHandler = (handlerName: string, fn: (...args: any[]) => any) => {
-    if (!enabled) return fn;
-
-    return (...args: any[]) => {
-      const start = performance.now();
-      const result = fn(...args);
-      const end = performance.now();
-      const duration = end - start;
-
-      if (duration > 5) { // Log if event handler takes more than 5ms
-        console.warn(`⚡ Performance: ${componentName}.${handlerName} took ${duration.toFixed(2)}ms`);
-      }
-
-      return result;
-    };
-  };
-
   return null; // This is a utility component, renders nothing
 }
 
 // Hook for monitoring specific operations
 export function usePerformanceMonitor(componentName: string, enabled: boolean = false) {
-  const measureOperation = (operationName: string, fn: () => any) => {
+  const measureOperation = (operationName: string, fn: () => unknown) => {
     if (!enabled) return fn();
 
     const start = performance.now();
@@ -66,7 +48,7 @@ export function usePerformanceMonitor(componentName: string, enabled: boolean = 
     return result;
   };
 
-  const measureAsyncOperation = async (operationName: string, fn: () => Promise<any>) => {
+  const measureAsyncOperation = async (operationName: string, fn: () => Promise<unknown>) => {
     if (!enabled) return await fn();
 
     const start = performance.now();

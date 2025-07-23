@@ -20,7 +20,11 @@ def create_tables(conn: sqlite3.Connection) -> None:
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Members (
             member_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            photo_url TEXT,
+            party TEXT,
+            state TEXT,
+            chamber TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -90,6 +94,30 @@ def create_tables(conn: sqlite3.Connection) -> None:
         )
     ''')
     
+    # Create StockPrices table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS StockPrices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            date TEXT NOT NULL,
+            open REAL NOT NULL,
+            high REAL NOT NULL,
+            low REAL NOT NULL,
+            close REAL NOT NULL,
+            volume INTEGER NOT NULL,
+            adj_open REAL,
+            adj_high REAL,
+            adj_low REAL,
+            adj_close REAL,
+            adj_volume INTEGER,
+            split_factor REAL DEFAULT 1.0,
+            dividend REAL DEFAULT 0.0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP,
+            UNIQUE(ticker, date)
+        )
+    ''')
+
     conn.commit()
     logging.info("Database tables ensured/created with standardized schema")
 
@@ -170,7 +198,7 @@ def verify_schema_consistency(conn: sqlite3.Connection) -> bool:
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     tables = {row[0] for row in cursor.fetchall()}
     
-    required_tables = {'Members', 'Filings', 'Assets', 'Transactions', 'API_Requests'}
+    required_tables = {'Members', 'Filings', 'Assets', 'Transactions', 'API_Requests', 'StockPrices'}
     
     if not required_tables.issubset(tables):
         missing = required_tables - tables
@@ -179,14 +207,15 @@ def verify_schema_consistency(conn: sqlite3.Connection) -> bool:
     
     # Verify table schemas
     table_schemas = {
-        'Members': ['member_id', 'name', 'created_at'],
+        'Members': ['member_id', 'name', 'photo_url', 'party', 'state', 'chamber', 'created_at'],
         'Filings': ['filing_id', 'member_id', 'doc_id', 'url', 'filing_date', 'verified', 'created_at'],
         'Assets': ['asset_id', 'company_name', 'ticker', 'created_at'],
         'Transactions': ['transaction_id', 'filing_id', 'asset_id', 'owner_code', 'transaction_type', 
                         'transaction_date', 'amount_range_low', 'amount_range_high', 'raw_llm_csv_line', 'created_at'],
         'API_Requests': ['request_id', 'filing_id', 'doc_id', 'generation_id', 'model', 'max_tokens',
                         'text_length', 'approx_tokens', 'finish_reason', 'response_status', 'error_message',
-                        'pdf_link', 'raw_text', 'llm_response', 'created_at']
+                        'pdf_link', 'raw_text', 'llm_response', 'created_at'],
+        'StockPrices': ['id', 'ticker', 'date', 'open', 'high', 'low', 'close', 'volume', 'adj_open', 'adj_high', 'adj_low', 'adj_close', 'adj_volume', 'split_factor', 'dividend', 'created_at', 'updated_at']
     }
     
     for table, expected_columns in table_schemas.items():

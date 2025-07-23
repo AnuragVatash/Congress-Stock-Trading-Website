@@ -1,3 +1,7 @@
+# Congress Alpha
+
+This project is now branded as Congress Alpha. All references to the old name have been updated.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

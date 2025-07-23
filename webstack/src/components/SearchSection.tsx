@@ -86,7 +86,7 @@ export default function SearchSection() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Search politicians ONLY when debounced value changes - prevents 952ms delays
+  // Search politicians ONLY when debounced value changes - prevents delays
   useEffect(() => {
     const searchPoliticians = async () => {
       if (politicianSearchDebounced.length < 2) {
@@ -188,167 +188,178 @@ export default function SearchSection() {
   }, [setStockSearch]);
 
   return (
-    <div className="py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16 }}>
+      <section 
+        className="rounded-lg card" 
+        style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}
+      >
         <h2 className="text-3xl font-bold text-white text-center mb-8">
           Search Congressional Trades
         </h2>
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Politician Search */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700" ref={politicianDropdownRef}>
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-              <svg className="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Politician Search
-            </h3>
-            <p className="text-gray-400 mb-4">
-              Find trades by a specific member of Congress
-            </p>
-            <form onSubmit={handlePoliticianSearch}>
-              <div className="relative">
-                <div className="flex gap-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      placeholder="Enter politician name (2+ chars)..."
-                      value={politicianSearchDisplay}
-                      onChange={handlePoliticianInputChange}
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
-                    />
-                    {loadingPoliticians && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    Search
-                  </button>
-                </div>
-                
-                {/* Politician Dropdown */}
-                {showPoliticianDropdown && politicianResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                    {politicianResults.map((politician) => (
-                      <button
-                        key={politician.member_id}
-                        type="button"
-                        onClick={() => handlePoliticianSelect(politician)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
-                            {politician.photo_url ? (
-                              <Image
-                                src={politician.photo_url}
-                                alt={politician.name}
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm font-semibold">
-                                {politician.name.charAt(0)}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-white font-medium truncate">{politician.name}</div>
-                            <div className="text-sm text-gray-400">
-                              {politician.party} • {politician.chamber} • {politician.state} • {politician.tradeCount} trades
-                            </div>
-                          </div>
+            {/* Politician Search */}
+            <div 
+              className="rounded-lg p-6 border" 
+              style={{ background: 'linear-gradient(10deg, var(--c-navy-700), var(--c-navy-800))', borderColor: 'var(--c-navy-600)' }}
+              ref={politicianDropdownRef}
+            >
+              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Politician Search
+              </h3>
+              <p className="text-gray-400 mb-4">
+                Find trades by a specific member of Congress
+              </p>
+              <form onSubmit={handlePoliticianSearch}>
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        placeholder="Enter politician name (2+ chars)..."
+                        value={politicianSearchDisplay}
+                        onChange={handlePoliticianInputChange}
+                        className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                      />
+                      {loadingPoliticians && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
                         </div>
-                      </button>
-                    ))}
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      Search
+                    </button>
                   </div>
-                )}
-              </div>
-            </form>
-            <div className="mt-4 text-sm text-gray-500">
-              Popular: Nancy Pelosi, Kevin McCarthy, Elizabeth Warren
-            </div>
-          </div>
-
-          {/* Stock Search */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700" ref={stockDropdownRef}>
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-              <svg className="w-6 h-6 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Stock Search
-            </h3>
-            <p className="text-gray-400 mb-4">
-              See which members traded a specific stock
-            </p>
-            <form onSubmit={handleStockSearch}>
-              <div className="relative">
-                <div className="flex gap-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      placeholder="Enter stock ticker or company (2+ chars)..."
-                      value={stockSearchDisplay}
-                      onChange={handleStockInputChange}
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-400"
-                    />
-                    {loadingStocks && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400"></div>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    Search
-                  </button>
-                </div>
-                
-                {/* Stock Dropdown */}
-                {showStockDropdown && stockResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                    {stockResults.map((stock) => (
-                      <button
-                        key={stock.asset_id}
-                        type="button"
-                        onClick={() => handleStockSelect(stock)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between">
+                  
+                  {/* Politician Dropdown */}
+                  {showPoliticianDropdown && politicianResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                      {politicianResults.map((politician) => (
+                        <button
+                          key={politician.member_id}
+                          type="button"
+                          onClick={() => handlePoliticianSelect(politician)}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0"
+                        >
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold text-xs">{stock.ticker}</span>
+                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
+                              {politician.photo_url ? (
+                                <Image
+                                  src={politician.photo_url}
+                                  alt={politician.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm font-semibold">
+                                  {politician.name.charAt(0)}
+                                </div>
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-white font-medium truncate">{stock.company_name}</div>
+                              <div className="text-white font-medium truncate">{politician.name}</div>
                               <div className="text-sm text-gray-400">
-                                {stock.ticker} • {stock.tradeCount} trades
+                                {politician.party} • {politician.chamber} • {politician.state} • {politician.tradeCount} trades
                               </div>
                             </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm text-green-400 font-semibold">
-                              {formatCurrency(stock.totalVolume)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </form>
+              <div className="mt-4 text-sm text-gray-500">
+                Popular: Nancy Pelosi, Kevin McCarthy, Elizabeth Warren
+              </div>
+            </div>
+
+            {/* Stock Search */}
+            <div 
+              className="rounded-lg p-6 border" 
+              style={{ background: 'linear-gradient(10deg, var(--c-navy-700), var(--c-navy-800))', borderColor: 'var(--c-navy-600)' }}
+              ref={stockDropdownRef}
+            >
+              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Stock Search
+              </h3>
+              <p className="text-gray-400 mb-4">
+                See which members traded a specific stock
+              </p>
+              <form onSubmit={handleStockSearch}>
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        placeholder="Enter stock ticker or company (2+ chars)..."
+                        value={stockSearchDisplay}
+                        onChange={handleStockInputChange}
+                        className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-400"
+                      />
+                      {loadingStocks && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400"></div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      Search
+                    </button>
+                  </div>
+                  
+                  {/* Stock Dropdown */}
+                  {showStockDropdown && stockResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                      {stockResults.map((stock) => (
+                        <button
+                          key={stock.asset_id}
+                          type="button"
+                          onClick={() => handleStockSelect(stock)}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span className="text-white font-bold text-xs">{stock.ticker}</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-white font-medium truncate">{stock.company_name}</div>
+                                <div className="text-sm text-gray-400">
+                                  {stock.ticker} • {stock.tradeCount} trades
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-sm text-green-400 font-semibold">
+                                {formatCurrency(stock.totalVolume)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </form>
+              <div className="mt-4 text-sm text-gray-500">
+                Popular: TSLA, AAPL, NVDA, MSFT, GOOGL
               </div>
-            </form>
-            <div className="mt-4 text-sm text-gray-500">
-              Popular: TSLA, AAPL, NVDA, MSFT, GOOGL
             </div>
           </div>
-        </div>
+        </section>
       </div>
-    </div>
-  );
-} 
+    );
+  } 

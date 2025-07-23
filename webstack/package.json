@@ -1,5 +1,6 @@
 {
-  "name": "webstack",
+  "name": "congress-alpha",
+  "description": "Congress Alpha: Track stock trades made by members of Congress in real-time. Transparency in congressional trading through comprehensive data analysis.",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -31,6 +32,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.5",
     "prisma": "^6.11.1",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",

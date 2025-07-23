@@ -3,101 +3,22 @@ import os
 import datetime
 import re # For parsing asset description
 import logging
+from common.db_schema import create_tables
 
 DB_FILE = 'congress_trades.db'  # New database file name
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
 
-def get_db_connection():
+def get_db_connection(db_path=None):
     """Creates a database connection and ensures foreign keys are enabled."""
-    db_path = os.path.join(os.path.dirname(__file__), DB_FILE)
+    if not db_path:
+        db_path = os.path.join(os.path.dirname(__file__), DB_FILE)
     conn = sqlite3.connect(db_path)
     conn.execute('PRAGMA foreign_keys = ON;')
     return conn
 
-def create_tables():
-    """Create the necessary database tables if they don't exist."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Create Members table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Members (
-            member_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create Filings table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Filings (
-            filing_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            member_id INTEGER NOT NULL,
-            doc_id TEXT NOT NULL UNIQUE,
-            url TEXT NOT NULL,
-            filing_date TEXT,
-            verified BOOLEAN DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (member_id) REFERENCES Members(member_id)
-        )
-    ''')
-    
-    # Create Assets table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Assets (
-            asset_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company_name TEXT NOT NULL,
-            ticker TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(company_name, ticker)
-        )
-    ''')
-    
-    # Create Transactions table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Transactions (
-            transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filing_id INTEGER NOT NULL,
-            asset_id INTEGER NOT NULL,
-            owner_code TEXT,
-            transaction_type TEXT NOT NULL,
-            transaction_date TEXT,
-            amount_range_low INTEGER,
-            amount_range_high INTEGER,
-            raw_llm_csv_line TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (filing_id) REFERENCES Filings(filing_id),
-            FOREIGN KEY (asset_id) REFERENCES Assets(asset_id)
-        )
-    ''')
-
-    # Create API_Requests table with all necessary columns
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS API_Requests (
-            request_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filing_id INTEGER NOT NULL,
-            doc_id TEXT NOT NULL,
-            generation_id TEXT,
-            model TEXT NOT NULL,
-            max_tokens INTEGER NOT NULL,
-            text_length INTEGER NOT NULL,
-            approx_tokens INTEGER NOT NULL,
-            finish_reason TEXT,
-            response_status INTEGER,
-            error_message TEXT,
-            pdf_link TEXT,
-            raw_text TEXT,
-            llm_response TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (filing_id) REFERENCES Filings(filing_id)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    logging.info(f"Database tables ensured/created in {DB_FILE}")
+# The create_tables function is now imported from common.db_schema
 
 def _format_date_to_iso(date_str_mmddyyyy):
     """Converts MM/DD/YYYY or MM-DD-YYYY to YYYY-MM-DD. Returns None if parsing fails."""
@@ -144,7 +65,7 @@ def _get_or_create_asset(cursor, company_name, ticker):
         cursor.execute("INSERT INTO Assets (company_name, ticker) VALUES (?, ?)", (company_name, ticker_to_db))
         return cursor.lastrowid
 
-def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_transactions: list):
+def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_transactions: list, db_path=None):
     """
     Processes a list of transactions from a single scraped PDF (DocID) and stores them.
     Args:
@@ -161,7 +82,7 @@ def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_
         logging.info(f"No transactions provided for DocID {doc_id}, Member {member_name}. Skipping.")
         return 0
 
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     inserted_count = 0
 
@@ -183,16 +104,16 @@ def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_
                 logging.info(f"Filing {doc_id} already has {existing_tx_count} transactions. Skipping to avoid duplicates.")
                 return 0
         else:
-        # 3. Create Filing
-        # Assuming notification_date_str is consistent for all transactions in the list
-        # and represents the filing date.
-        filing_date_iso = _format_date_to_iso(llm_transactions[0].get('notification_date_str'))
-        if not filing_date_iso:
-            logging.warning(f"Could not determine a valid filing date for DocID {doc_id}. Using NULL.")
+            # 3. Create Filing
+            # Assuming notification_date_str is consistent for all transactions in the list
+            # and represents the filing date.
+            filing_date_iso = _format_date_to_iso(llm_transactions[0].get('notification_date_str'))
+            if not filing_date_iso:
+                logging.warning(f"Could not determine a valid filing date for DocID {doc_id}. Using NULL.")
 
-        cursor.execute("INSERT INTO Filings (doc_id, member_id, url, filing_date) VALUES (?, ?, ?, ?)",
-                       (doc_id, member_id, url, filing_date_iso))
-        filing_id = cursor.lastrowid
+            cursor.execute("INSERT INTO Filings (doc_id, member_id, url, filing_date) VALUES (?, ?, ?, ?)",
+                           (doc_id, member_id, url, filing_date_iso))
+            filing_id = cursor.lastrowid
 
         # 4. Process each transaction
         logging.info(f"[{doc_id}] Processing {len(llm_transactions)} transactions for database insertion")
@@ -250,77 +171,16 @@ def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_
 
     return inserted_count
 
-def get_existing_doc_ids():
+def get_existing_doc_ids(db_path=None):
     """Retrieves a set of all DocIDs currently stored in the Filings table."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT doc_id FROM Filings")
-    doc_ids = {row[0] for row in cursor.fetchall()}
-    conn.close()
+    try:
+        cursor.execute("SELECT DISTINCT doc_id FROM Filings")
+        doc_ids = {row[0] for row in cursor.fetchall()}
+    except sqlite3.OperationalError as e:
+        logging.error(f"Error fetching existing DocIDs from {db_path}: {e}")
+        doc_ids = set()
+    finally:
+        conn.close()
     return doc_ids
-
-# Example of how your main script might use this:
-if __name__ == '__main__':
-    create_tables() # Ensure tables exist
-
-    # --- This is placeholder data. Your main script will get this from scraping & LLM ---
-    sample_member_name = "John Q. Legislator"
-    sample_doc_id = "DOC12345TEST"
-    sample_url = "https://example.com/doc12345test.pdf"
-
-    # This list would be the output of `parse_llm_transactions` from `scanToTextLLM.py`
-    # after `scan_with_openrouter` processes the PDF.
-    sample_llm_transactions_output = [
-        {
-            "owner_code": "SP", "company_name": "Alpha Corp", "ticker": "ACRP",
-            "transaction_type_full": "Purchase", "transaction_date_str": "03/10/2024",
-            "notification_date_str": "03/15/2024", "amount_low": 1001, "amount_high": 15000,
-            "raw_llm_line": "SP,Alpha Corp (ACRP),P,03/10/2024,03/15/2024,$1,001-$15,000"
-        },
-        {
-            "owner_code": "JT", "company_name": "Beta Inc.", "ticker": "BETA",
-            "transaction_type_full": "Sale", "transaction_date_str": "03/11/2024",
-            "notification_date_str": "03/15/2024", "amount_low": 50001, "amount_high": 100000,
-            "raw_llm_line": "JT,Beta Inc. (BETA),S,03/11/2024,03/15/2024,$50,001-$100,000"
-        },
-        {
-            "owner_code": "DC", "company_name": "Treasury Note Fund", "ticker": None, # Example of non-ticker asset
-            "transaction_type_full": "Purchase", "transaction_date_str": "03/12/2024",
-            "notification_date_str": "03/15/2024", "amount_low": 15001, "amount_high": 50000,
-            "raw_llm_line": "DC,Treasury Note Fund,P,03/12/2024,03/15/2024,$15,001-$50,000"
-        }
-    ]
-    # --- End of placeholder data ---
-
-    # Check if DocID already processed
-    if sample_doc_id not in get_existing_doc_ids():
-        num_inserted = process_and_store_scraped_data(
-            sample_member_name,
-            sample_doc_id,
-            sample_url,
-            sample_llm_transactions_output
-        )
-        print(f"Inserted {num_inserted} transactions for sample DocID {sample_doc_id}.")
-    else:
-        print(f"Sample DocID {sample_doc_id} already processed.")
-
-    # Test with another document to see unique constraint in action if run twice
-    sample_doc_id_2 = "DOC67890TEST"
-    sample_llm_transactions_output_2 = [
-        {
-            "owner_code": "SP", "company_name": "Gamma LLC", "ticker": "GMMA",
-            "transaction_type_full": "Exchange", "transaction_date_str": "04/01/2024",
-            "notification_date_str": "04/05/2024", "amount_low": 100000, "amount_high": 250000,
-            "raw_llm_line": "SP,Gamma LLC (GMMA),E,04/01/2024,04/05/2024,$100,000-$250,000"
-        }
-    ]
-    if sample_doc_id_2 not in get_existing_doc_ids():
-        num_inserted_2 = process_and_store_scraped_data(
-            sample_member_name, # Same member, different filing
-            sample_doc_id_2,
-            "https://example.com/doc67890test.pdf",
-            sample_llm_transactions_output_2
-        )
-        print(f"Inserted {num_inserted_2} transactions for sample DocID {sample_doc_id_2}.")
-    else:
-        print(f"Sample DocID {sample_doc_id_2} already processed.")

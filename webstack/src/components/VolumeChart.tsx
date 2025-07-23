@@ -54,7 +54,6 @@ export default function VolumeChart({
     // Scaling functions
     const xScale = (date: number) => ((date - minDate) / (maxDate - minDate)) * chartWidth + margin.left;
     const yPriceScale = (price: number) => chartHeight - ((price - minPrice) / (maxPrice - minPrice)) * chartHeight + margin.top;
-    const yVolumeScale = (volume: number) => chartHeight - (volume / maxVolume) * (chartHeight * 0.3) + margin.top;
 
     // Draw background
     ctx.fillStyle = '#1f2937';
@@ -93,9 +92,9 @@ export default function VolumeChart({
       // Volume bar color based on price change
       if (index > 0) {
         const prevPrice = priceData[index - 1].price;
-        ctx.fillStyle = point.price > prevPrice ? '#10b981' : '#ef4444';
+        ctx.fillStyle = point.price > prevPrice ? 'var(--c-teal)' : 'var(--c-red)';
       } else {
-        ctx.fillStyle = '#6b7280';
+        ctx.fillStyle = 'var(--c-gray)';
       }
       
       ctx.globalAlpha = 0.7;
@@ -104,7 +103,7 @@ export default function VolumeChart({
     });
 
     // Draw price line
-    ctx.strokeStyle = '#3b82f6';
+    ctx.strokeStyle = 'var(--c-blue)';
     ctx.lineWidth = 3;
     ctx.beginPath();
     
@@ -149,7 +148,7 @@ export default function VolumeChart({
     ctx.fill();
 
     // Draw axes labels
-    ctx.fillStyle = '#9ca3af';
+    ctx.fillStyle = 'var(--c-gray)';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     
@@ -195,7 +194,7 @@ export default function VolumeChart({
     ctx.fillText(`${ticker} Price and Volume`, canvas.width / 2, 20);
 
     // Y-axis labels
-    ctx.fillStyle = '#9ca3af';
+    ctx.fillStyle = 'var(--c-gray)';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     

@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Congressional Trading Tracker",
-  description: "Track stock trades made by members of Congress in real-time. Transparency in congressional trading through comprehensive data analysis.",
+  title: "Congress Alpha",
+  description: "Track stock trades made by members of Congress in real-time. Transparency in congressional trading through comprehensive data analysis. Powered by Congress Alpha.",
+  icons: {
+    icon: "/favicon.ico"
+  }
 };
 
 export default function RootLayout({
@@ -24,12 +27,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased text-white`}
       >
+        <header style={{ background: 'var(--c-navy)', color: '#fff', padding: '1rem' }}>
+          <nav>
+            {/* Top Navigation */}
+          </nav>
+        </header>
         {process.env.NODE_ENV === 'development' && <DebugPerformance />}
-        {children}
+        <main>{children}</main>
       </body>
     </html>
   );

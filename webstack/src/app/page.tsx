@@ -1,3 +1,5 @@
+export const dynamic = 'error';
+export const revalidate = 0;
 // webstack/src/app/page.tsx
 // OPTIMIZED VERSION - Uses SQL aggregation instead of loading individual transactions
 
@@ -5,24 +7,12 @@ import HeroSection from '@/src/components/HeroSection';
 import SearchSection from '@/src/components/SearchSection';
 import StatsGrid from '@/src/components/StatsGrid';
 import RecentTradesHome from '@/src/components/RecentTradesHome';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import Image from 'next/image';
 
-const prisma = new PrismaClient();
-
 // Performance monitoring functions
-function measureTime<T>(operationName: string, fn: () => T): T {
-  const start = performance.now();
-  const result = fn();
-  const end = performance.now();
-  const duration = end - start;
-  
-  console.log(`🚀 HOME: ${operationName} took ${duration.toFixed(2)}ms`);
-  return result;
-}
-
 async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>): Promise<T> {
   const start = performance.now();
   const result = await fn();
@@ -176,15 +166,115 @@ export default async function Home() {
   const pageEnd = performance.now();
   console.log(`🚀 HOME: TOTAL PAGE TIME: ${(pageEnd - pageStart).toFixed(2)}ms`);
 
+  // Fetch the top 30 largest transactions for the ticker (server-side SQL query)
+  const topTransactions = await prisma.transactions.findMany({
+    where: {
+      AND: [
+        { amount_range_high: { not: null } },
+        { amount_range_low: { not: null } },
+        { Assets: { ticker: { not: null } } },
+      ],
+    },
+    include: {
+      Assets: true,
+      Filings: {
+        include: {
+          Members: true,
+        },
+      },
+    },
+    orderBy: {
+      amount_range_high: 'desc',
+    },
+    take: 30,
+  });
+
+  // Helper to format currency
+  function formatCurrency(value: number | null) {
+    if (value == null) return 'N/A';
+    if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+    if (value >= 1e3) return `${(value / 1e3).toFixed(0)}K`;
+    return `${value}`;
+  }
+
+  // Helper to format date
+  function formatDate(date: Date | string | null) {
+    if (!date) return '';
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  // Use the topTransactions for the ticker
+  const tickerTrades = topTransactions.map(trade => {
+    const member = trade.Filings?.Members?.name || 'Unknown';
+    const ticker = trade.Assets?.ticker || '???';
+    const low = formatCurrency(trade.amount_range_low);
+    const high = formatCurrency(trade.amount_range_high);
+    const amount = `$${low}–$${high}`;
+    const type = trade.transaction_type.toLowerCase().includes('purchase') ? 'Purchase' : 'Sale';
+    const date = formatDate(trade.transaction_date);
+    return { member, ticker, amount, type, date };
+  });
+
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(120deg, var(--c-navy-50) 0%, var(--c-gray-50) 100%)', color: 'var(--c-navy)' }}>
+      {/* Top Ticker Bar Only */}
+      <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', background: 'linear-gradient(90deg, var(--c-navy), var(--c-navy-600))', color: '#fff', minHeight: '56px', display: 'flex', alignItems: 'center', overflow: 'hidden', zIndex: 100 }}>
+        {/* Ticker */}
+        <div style={{ width: '100%', overflow: 'hidden', height: '56px', display: 'flex', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'stretch',
+              whiteSpace: 'nowrap',
+              animation: 'ticker-scroll-ltr 93s linear infinite',
+              fontSize: '1rem',
+              gap: '0',
+            }}
+          >
+            {tickerTrades.concat(tickerTrades).map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '180px',
+                  padding: '0 1.25rem',
+                  marginRight: 0,
+                  fontWeight: 500,
+                  color: item.type === 'Purchase' ? '#4AC088' : '#E74C3C',
+                  borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.18)',
+                }}
+              >
+                <span>{item.member} {item.ticker} {item.amount} {item.type}</span>
+                <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.7)', marginTop: 2, textAlign: 'center', fontWeight: 400 }}>
+                  {item.date}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Ticker CSS */}
+        <style>{`
+          @keyframes ticker-scroll-ltr {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+          }
+          body { margin-top: 56px !important; }
+        `}</style>
+      </div>
       {/* Hero Section with Sidebars */}
-      <div className="relative py-16 px-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="relative py-4 px-4">
+        <div style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16, background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderRadius: '0.75rem', border: '1px solid #fff' }}>
           <div className="grid lg:grid-cols-12 gap-6">
             {/* Left Sidebar - Featured Members */}
             <div className="lg:col-span-3 hidden lg:block">
-              <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 h-full">
+              <div 
+                className="rounded-lg p-6 border h-full"
+                style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderColor: 'var(--c-navy-600)' }}
+              >
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-white">Featured Members</h2>
                   <Link href="/members" className="text-blue-400 hover:text-blue-300 text-sm font-medium">
@@ -192,7 +282,7 @@ export default async function Home() {
                   </Link>
                 </div>
                 <div className="space-y-2 overflow-hidden" style={{ height: '408px' }}>
-                  {featuredPoliticians.slice(0, 5).map((politician, index) => (
+                  {featuredPoliticians.slice(0, 5).map((politician) => (
                     <Link
                       key={politician.member_id}
                       href={`/members/${politician.member_id}`}
@@ -240,7 +330,10 @@ export default async function Home() {
 
             {/* Right Sidebar - Top Traded Stocks */}
             <div className="lg:col-span-3 hidden lg:block">
-              <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 h-full">
+              <div 
+                className="rounded-lg p-6 border h-full"
+                style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderColor: 'var(--c-navy-600)' }}
+              >
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-white">Top Traded Stocks</h2>
                   <Link href="/trades" className="text-blue-400 hover:text-blue-300 text-sm font-medium">
@@ -248,7 +341,7 @@ export default async function Home() {
                   </Link>
                 </div>
                 <div className="space-y-2 overflow-hidden" style={{ height: '408px' }}>
-                  {topStocks.slice(0, 5).map((stock, index) => (
+                  {topStocks.slice(0, 5).map((stock) => (
                     <div
                       key={stock.ticker}
                       className="block bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors cursor-pointer"
@@ -290,11 +383,14 @@ export default async function Home() {
       {/* Newsletter Section */}
       <div className="py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-center">
-            <h3 className="text-2xl font-bold text-white mb-4">
+          <div 
+            className="card text-center" 
+            style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', border: 'none' }}
+          >
+            <h3 className="text-2xl font-bold mb-4" style={{ color: 'var(--c-jade)' }}>
               Stay Updated on Congressional Trading
             </h3>
-            <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+            <p className="mb-6 max-w-2xl mx-auto text-white">
               Get weekly insights and alerts about significant trades made by members of Congress. 
               Join thousands of investors and journalists who rely on our data.
             </p>
@@ -302,15 +398,12 @@ export default async function Home() {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-200 focus:outline-none focus:border-white/40"
+                className="flex-1 px-4 py-3 rounded-lg"
               />
-              <button className="px-6 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+              <button className="button-primary">
                 Subscribe
               </button>
             </div>
-            <p className="text-xs text-blue-200 mt-4">
-              Trusted by reporters at The New York Times, Wall Street Journal, and more.
-            </p>
           </div>
         </div>
       </div>

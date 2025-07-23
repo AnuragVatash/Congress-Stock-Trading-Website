@@ -40,9 +40,8 @@ function formatCurrency(value: number): string {
 
 export default function FeaturedCards({ featuredPoliticians, topStocks }: Props) {
   return (
-    <div className="py-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12">
+    <div style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16, border: '1px solid #fff', borderRadius: 12 }}>
+      <div className="grid lg:grid-cols-2 gap-12">
           {/* Featured Politicians */}
           <div>
             <div className="flex justify-between items-center mb-6">
@@ -56,10 +55,11 @@ export default function FeaturedCards({ featuredPoliticians, topStocks }: Props)
                 <Link
                   key={politician.member_id}
                   href={`/members/${politician.member_id}`}
-                  className="block bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors p-4"
+                  className="block card hover:shadow-lg transition-colors"
+                  style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden" style={{ background: 'var(--c-jade-100)' }}>
                       {politician.photo_url ? (
                         <Image
                           src={politician.photo_url}
@@ -98,7 +98,7 @@ export default function FeaturedCards({ featuredPoliticians, topStocks }: Props)
               </Link>
             </div>
             <div className="space-y-4">
-              {topStocks.slice(0, 4).map((stock, index) => (
+              {topStocks.slice(0, 4).map((stock) => (
                 <div
                   key={stock.ticker}
                   className="bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors p-4"
@@ -125,7 +125,7 @@ export default function FeaturedCards({ featuredPoliticians, topStocks }: Props)
         </div>
 
         {/* Newsletter Signup */}
-        <div className="mt-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-center">
+        <div className="mt-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-center" style={{ border: '1px solid #fff', borderRadius: 12 }}>
           <h3 className="text-2xl font-bold text-white mb-4">
             Stay Updated on Congressional Trading
           </h3>
@@ -147,7 +147,6 @@ export default function FeaturedCards({ featuredPoliticians, topStocks }: Props)
             Trusted by reporters at The New York Times, Wall Street Journal, and more.
           </p>
         </div>
-      </div>
     </div>
   );
 } 

@@ -203,7 +203,7 @@ export default function IssuersTable({ issuers }: Props) {
           companyNameLower: issuer.company_name.toLowerCase() // Pre-compute for faster sorting
         };
       });
-    });
+    }) as OptimizedIssuer[];
   }, [currentIssuers, measureOperation]);
 
   // Get unique sectors for filter dropdown - ONLY depends on current issuers  
@@ -211,7 +211,7 @@ export default function IssuersTable({ issuers }: Props) {
     return measureOperation('computeSectors', () => {
       const uniqueSectors = new Set(currentIssuers.map(i => i.sector));
       return Array.from(uniqueSectors).sort();
-    });
+    }) as string[];
   }, [currentIssuers, measureOperation]);
 
   // PERFORMANCE-CRITICAL: Filter function with early exits and no dependencies
@@ -287,34 +287,22 @@ export default function IssuersTable({ issuers }: Props) {
   }, []); // NO dependencies to prevent recreation
 
   // CRITICAL: Main computation ONLY triggered by debounced values - NEVER by display values
-  const { filteredIssuers } = useMemo(() => {
-    return measureOperation('filterAndSort', () => {
-      // Filter by search terms using ONLY debounced values - NEVER display values
-      const filtered = filterIssuers(
-        optimizedIssuers, 
-        issuerSearchDebounced, 
-        politicianSearchDebounced, 
-        sectorFilter
-      );
-      
-      // Sort the filtered results
-      const sorted = sortIssuers(filtered, sortBy, sortDirection);
+  const { filteredIssuers } = measureOperation('filterAndSort', () => {
+    // Filter by search terms using ONLY debounced values - NEVER display values
+    const filtered = filterIssuers(
+      optimizedIssuers, 
+      issuerSearchDebounced, 
+      politicianSearchDebounced, 
+      sectorFilter
+    );
+    
+    // Sort the filtered results
+    const sorted = sortIssuers(filtered, sortBy, sortDirection);
 
-      return {
-        filteredIssuers: sorted
-      };
-    });
-  }, [
-    optimizedIssuers, 
-    issuerSearchDebounced,  // ONLY debounced values
-    politicianSearchDebounced, // ONLY debounced values
-    sectorFilter, 
-    sortBy, 
-    sortDirection, 
-    filterIssuers, 
-    sortIssuers,
-    measureOperation
-  ]);
+    return {
+      filteredIssuers: sorted
+    };
+  }) as { filteredIssuers: OptimizedIssuer[] };
 
   // Memoized event handlers to prevent re-renders
   const handleSort = useCallback((option: SortOption) => {
@@ -413,7 +401,7 @@ export default function IssuersTable({ issuers }: Props) {
             >
               <option value="">All Sectors</option>
               {sectors.map((sector: string) => (
-                <option key={sector} value={sector}>{sector}</option>
+                <option key={sector} value={sector}>{sector.replace(/"/g, '&quot;')}</option>
               ))}
             </select>
           </div>
@@ -458,7 +446,7 @@ export default function IssuersTable({ issuers }: Props) {
       {/* Main Data Table */}
       <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" style={{ background: 'var(--c-navy-50)', color: 'var(--c-navy)' }}>
             <thead className="bg-gray-700">
               <tr className="text-left">
                 <th 
@@ -521,13 +509,13 @@ export default function IssuersTable({ issuers }: Props) {
             </thead>
             <tbody className="divide-y divide-gray-700">
               {filteredIssuers.map((issuer: OptimizedIssuer) => (
-                <tr key={issuer.asset_id} className="hover:bg-gray-700/50 transition-colors">
+                <tr key={issuer.asset_id} className="hover:bg-[var(--c-jade-100)] transition-colors">
                   <td className="px-6 py-4">
                     <Link 
                       href={`/stocks/${issuer.asset_id}`}
                       className="text-blue-400 hover:text-blue-300"
                     >
-                      <div className="font-semibold">{issuer.company_name}</div>
+                      <div className="font-semibold" style={{ color: 'var(--c-jade)' }}>{issuer.company_name}</div>
                       {issuer.ticker && (
                         <div className="text-sm text-gray-400 font-mono">{issuer.ticker}</div>
                       )}
@@ -572,6 +560,7 @@ export default function IssuersTable({ issuers }: Props) {
             <div className="text-center py-12">
               {issuerSearchDebounced.length >= 2 ? (
                 <div>
+                  {/* eslint-disable-next-line react/no-unescaped-entities */}
                   <p className="text-gray-400 mb-2">No issuers found matching "{issuerSearchDebounced}"</p>
                   <p className="text-sm text-gray-500">Try a different search term or check for typos.</p>
                 </div>

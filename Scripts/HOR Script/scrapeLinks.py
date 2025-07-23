@@ -84,7 +84,7 @@ def typeP(working_dir, existing_doc_ids=None):
     # Return all collected results
     return all_results
 
-def scrape():
+def scrape(db_path=None):
     """
     Main scraping function that gets PDF links and filters out already processed documents.
     Returns:
@@ -99,7 +99,7 @@ def scrape():
     
     try:
         # Get existing DocIDs from database
-        existing_doc_ids = get_existing_doc_ids()
+        existing_doc_ids = get_existing_doc_ids(db_path)
         logging.info(f"Found {len(existing_doc_ids)} existing DocIDs in database")
     except Exception as e:
         logging.error(f"Error fetching existing DocIDs: {e}")

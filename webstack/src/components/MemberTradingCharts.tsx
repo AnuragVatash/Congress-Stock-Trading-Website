@@ -5,7 +5,6 @@ import { useState } from 'react';
 import StockPriceChart from './StockPriceChart';
 import VolumeChart from './VolumeChart';
 import { 
-  getMockPriceDataForDateRange, 
   getDateRangeFromTransactions, 
   generateTradeDataPoints 
 } from '@/src/lib/priceDataService';
@@ -128,7 +127,7 @@ export default function MemberTradingCharts({ trades, memberName }: Props) {
       {/* Stock Selector */}
       <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
         <h3 className="text-xl font-bold text-white mb-4">
-          {memberName}'s Trading Activity
+          {memberName}&apos;s Trading Activity
         </h3>
         
         <div className="mb-4">
@@ -201,7 +200,7 @@ export default function MemberTradingCharts({ trades, memberName }: Props) {
           {/* Additional Info */}
           <div className="mt-4 bg-gray-800 rounded-lg p-4 border border-gray-700">
             <h4 className="text-lg font-semibold text-white mb-2">
-              {memberName}'s {currentStock.ticker} Trading Summary
+              {memberName}&apos;s {currentStock.ticker} Trading Summary
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <div>

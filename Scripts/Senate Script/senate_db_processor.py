@@ -3,101 +3,22 @@ import os
 import datetime
 import re # For parsing asset description
 import logging
+from common.db_schema import create_tables
 
 DB_FILE = 'senate_trades.db'  # Senate database file name
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
 
-def get_db_connection():
+def get_db_connection(db_path=None):
     """Creates a database connection and ensures foreign keys are enabled."""
-    db_path = os.path.join(os.path.dirname(__file__), DB_FILE)
+    if not db_path:
+        db_path = os.path.join(os.path.dirname(__file__), DB_FILE)
     conn = sqlite3.connect(db_path)
     conn.execute('PRAGMA foreign_keys = ON;')
     return conn
 
-def create_tables():
-    """Create the necessary database tables if they don't exist."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Create Members table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Members (
-            member_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create Filings table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Filings (
-            filing_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            member_id INTEGER NOT NULL,
-            doc_id TEXT NOT NULL UNIQUE,
-            url TEXT NOT NULL,
-            filing_date TEXT,
-            verified BOOLEAN DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (member_id) REFERENCES Members(member_id)
-        )
-    ''')
-    
-    # Create Assets table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Assets (
-            asset_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company_name TEXT NOT NULL,
-            ticker TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(company_name, ticker)
-        )
-    ''')
-    
-    # Create Transactions table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Transactions (
-            transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filing_id INTEGER NOT NULL,
-            asset_id INTEGER NOT NULL,
-            owner_code TEXT,
-            transaction_type TEXT NOT NULL,
-            transaction_date TEXT,
-            amount_range_low INTEGER,
-            amount_range_high INTEGER,
-            raw_llm_csv_line TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (filing_id) REFERENCES Filings(filing_id),
-            FOREIGN KEY (asset_id) REFERENCES Assets(asset_id)
-        )
-    ''')
-
-    # Create API_Requests table with all necessary columns
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS API_Requests (
-            request_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filing_id INTEGER NOT NULL,
-            doc_id TEXT NOT NULL,
-            generation_id TEXT,
-            model TEXT NOT NULL,
-            max_tokens INTEGER NOT NULL,
-            text_length INTEGER NOT NULL,
-            approx_tokens INTEGER NOT NULL,
-            finish_reason TEXT,
-            response_status INTEGER,
-            error_message TEXT,
-            pdf_link TEXT,
-            raw_text TEXT,
-            llm_response TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (filing_id) REFERENCES Filings(filing_id)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    logging.info(f"Database tables ensured/created in {DB_FILE}")
+# The create_tables function is now imported from common.db_schema
 
 def _format_date_to_iso(date_str_mmddyyyy):
     """Converts MM/DD/YYYY or MM-DD-YYYY to YYYY-MM-DD. Returns None if parsing fails."""
@@ -144,7 +65,7 @@ def _get_or_create_asset(cursor, company_name, ticker):
         cursor.execute("INSERT INTO Assets (company_name, ticker) VALUES (?, ?)", (company_name, ticker_to_db))
         return cursor.lastrowid
 
-def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_transactions: list):
+def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_transactions: list, db_path=None):
     """
     Processes a list of transactions from a single scraped PDF (DocID) and stores them.
     Args:
@@ -161,7 +82,7 @@ def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_
         logging.info(f"No transactions provided for DocID {doc_id}, Member {member_name}. Skipping.")
         return 0
 
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     inserted_count = 0
 
@@ -250,13 +171,18 @@ def process_and_store_scraped_data(member_name: str, doc_id: str, url: str, llm_
 
     return inserted_count
 
-def get_existing_doc_ids():
+def get_existing_doc_ids(db_path=None):
     """Retrieves a set of all DocIDs currently stored in the Filings table."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT doc_id FROM Filings")
-    doc_ids = {row[0] for row in cursor.fetchall()}
-    conn.close()
+    try:
+        cursor.execute("SELECT DISTINCT doc_id FROM Filings")
+        doc_ids = {row[0] for row in cursor.fetchall()}
+    except sqlite3.OperationalError as e:
+        logging.error(f"Error fetching existing DocIDs from {db_path}: {e}")
+        doc_ids = set()
+    finally:
+        conn.close()
     return doc_ids
 
 # Example of how your main script might use this:

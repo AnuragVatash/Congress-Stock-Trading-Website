@@ -27,7 +27,10 @@ type Props = {
 
 export default function MemberProfileCard({ member, trades = [] }: Props) {
   return (
-    <div className="bg-gray-800 text-white p-6 rounded-lg shadow-lg">
+    <div 
+      className="card" 
+      style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}
+    >
       <div className="flex flex-col items-center">
         {/*
           THIS IS THE KEY PART:
@@ -44,7 +47,7 @@ export default function MemberProfileCard({ member, trades = [] }: Props) {
             priority // Add priority to load the main image faster
           />
         )}
-        <h1 className="text-3xl font-bold mt-4">{member.name}</h1>
+        <h1 className="text-3xl font-bold mt-4 text-white" style={{ color: 'var(--c-jade)' }}>{member.name}</h1>
         <p className="text-lg text-gray-400 mt-1">
           {member.party} | {member.chamber} of {member.state}
         </p>

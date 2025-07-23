@@ -1,3 +1,5 @@
+export const dynamic = 'error';
+export const revalidate = 0;
 // webstack/src/app/trades/page.tsx
 // ALREADY OPTIMIZED - Uses SQL aggregation, adding performance monitoring
 
@@ -8,16 +10,6 @@ import IssuersTable from '@/src/components/IssuersTable';
 const prisma = new PrismaClient();
 
 // Performance monitoring functions
-function measureTime<T>(operationName: string, fn: () => T): T {
-  const start = performance.now();
-  const result = fn();
-  const end = performance.now();
-  const duration = end - start;
-  
-  console.log(`🚀 TRADES: ${operationName} took ${duration.toFixed(2)}ms`);
-  return result;
-}
-
 async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>): Promise<T> {
   const start = performance.now();
   const result = await fn();
@@ -190,21 +182,26 @@ export default async function TradesPage() {
   console.log(`🚀 TRADES: TOTAL PAGE TIME: ${(pageEnd - pageStart).toFixed(2)}ms`);
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen" style={{ background: 'var(--c-navy)', color: 'var(--c-navy)' }}>
+      {/* Congress Alpha Brand */}
+      <div className="w-full" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
+        <span className="text-3xl font-extrabold" style={{ color: '#fff' }}>Congress Alpha</span>
+      </div>
+      
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="card" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
           <div className="flex items-center mb-4">
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mr-4">
+            <Link href="/" className="button-secondary">
               ← Back to Home
             </Link>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Congressional Trades</h1>
-          <p className="text-xl text-gray-400">
+          <h1 className="text-4xl font-bold mb-4 text-white" style={{ color: 'var(--c-jade)' }}>Congressional Trades</h1>
+          <p className="text-xl text-white">
             Comprehensive view of all securities traded by members of Congress
           </p>
-          <div className="mt-2 bg-blue-900/30 border border-blue-700 rounded-lg p-3">
-            <p className="text-sm text-blue-200">
+          <div className="mt-2 card" style={{ background: 'var(--c-jade-100)', border: 'none' }}>
+            <p className="text-sm" style={{ color: 'var(--c-jade)' }}>
               💡 <strong>Search Enhancement:</strong> The search now queries ALL traded securities, not just the top 50 shown by default.
             </p>
           </div>

@@ -23,13 +23,12 @@ export function DebugPerformance() {
     const originalAddEventListener = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(this: EventTarget, type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions) {
       if (type === 'input' || type === 'change') {
-        const self = this;
-        const wrappedListener = function(event: Event) {
+        const wrappedListener = function(this: EventTarget, event: Event) {
           const start = performance.now();
           
           // Call original listener
           if (typeof listener === 'function') {
-            listener.call(self, event);
+            listener.call(this, event);
           } else if (listener && typeof listener.handleEvent === 'function') {
             listener.handleEvent(event);
           }

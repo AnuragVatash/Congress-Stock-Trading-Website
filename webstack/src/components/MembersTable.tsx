@@ -235,7 +235,7 @@ export default function MembersTable({ members }: Props) {
 
       <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" style={{ background: 'var(--c-navy-50)', color: 'var(--c-navy)' }}>
             <thead className="bg-gray-700">
               <tr className="text-left">
                 <th 
@@ -281,7 +281,7 @@ export default function MembersTable({ members }: Props) {
             </thead>
             <tbody className="divide-y divide-gray-700">
               {displayedMembers.map((member) => (
-                <tr key={member.member_id} className="hover:bg-gray-700/50 transition-colors">
+                <tr key={member.member_id} className="hover:bg-[var(--c-jade-100)] transition-colors">
                   <td className="px-6 py-4">
                     <Link 
                       href={`/members/${member.member_id}`}
@@ -301,7 +301,7 @@ export default function MembersTable({ members }: Props) {
                           </div>
                         )}
                       </div>
-                      <span className="font-medium">{member.name}</span>
+                      <span className="font-medium" style={{ color: 'var(--c-navy)' }}>{member.name}</span>
                     </Link>
                   </td>
                   <td className="px-6 py-4">

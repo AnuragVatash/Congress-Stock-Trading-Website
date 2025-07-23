@@ -355,7 +355,7 @@ def parse_amount_range(amount_str):
         logging.warning(f"Could not parse amount range: {amount_str}")
         return None, None
 
-def process_document_worker():
+def process_document_worker(db_path=None):
     """Worker function that processes documents from the queue."""
     thread_name = threading.current_thread().name
     documents_processed = 0
@@ -432,7 +432,13 @@ def process_document_worker():
                         transactions = llm.parse_llm_transactions(llm_response, member_data)
                         
                         if transactions:
-                            num_inserted = db.process_and_store_scraped_data(member_name, doc_id, doc_url, transactions)
+                            num_inserted = db.process_and_store_scraped_data(
+                                member_name=member_name,
+                                doc_id=doc_id,
+                                url=doc_url,
+                                llm_transactions=transactions,
+                                db_path=db_path
+                            )
                             logging.info(f"{thread_name}: Successfully processed {doc_id} - {num_inserted} transactions inserted")
                             
                             # Add to results
@@ -491,33 +497,28 @@ def process_document_worker():
         driver.quit()
         logging.info(f"{thread_name}: Finished processing {documents_processed} documents")
 
-def scrape_all_ptr_links(force_rescrape=False):
-    """Scrape all PTR links from the Senate website with optimization."""
+def scrape_all_ptr_links(force_rescrape=False, db_path=None):
+    """
+    Scrape all PTR links from the Senate filing website.
+    This function handles pagination and session verification.
+    """
     logging.info("Starting to scrape all PTR links...")
     
-    # First, try to load existing scraped links if not forcing rescrape
-    if not force_rescrape:
-        existing_links = load_scraped_links()
-        if existing_links:
-            logging.info("Found existing scraped links, checking which documents need processing...")
+    # Check if links file exists and is recent
+    if not force_rescrape and os.path.exists(LINKS_FILE):
+        file_mod_time = datetime.fromtimestamp(os.path.getmtime(LINKS_FILE))
+        if (datetime.now() - file_mod_time).days < 1:
+            logging.info("Scraped links file is recent, loading from cache")
+            with open(LINKS_FILE, 'r') as f:
+                all_links = json.load(f)
             
-            # Filter existing links to find unprocessed documents
-            unprocessed_links = filter_new_documents(existing_links)
+            # Filter out already processed links
+            existing_doc_ids = db.get_existing_doc_ids(db_path)
+            new_links = [link for link in all_links if link['doc_id'] not in existing_doc_ids]
             
-            if unprocessed_links:
-                logging.info(f"Found {len(unprocessed_links)} unprocessed documents from cached links")
-                
-                # Check if we need to scrape for newer documents by comparing dates
-                most_recent_cached_date = existing_links[0].get('filing_date', '') if existing_links else ''
-                logging.info(f"Most recent cached document date: {most_recent_cached_date}")
-                
-                # For now, if we have unprocessed documents, use them
-                # In the future, we could add logic to check if there are newer documents on the website
-                return unprocessed_links
-            else:
-                logging.info("All cached documents have been processed, need to check for new documents on website")
-                # Continue to scrape fresh to check for new documents
-    
+            logging.info(f"Found {len(all_links)} total links in cache, {len(new_links)} are new")
+            return new_links
+            
     # Scrape fresh links from the website
     driver = webdriver.Chrome()
     all_links = []
@@ -642,12 +643,16 @@ def scrape_all_ptr_links(force_rescrape=False):
     # Save all scraped links
     save_scraped_links(all_links)
     
-    logging.info(f"Completed link scraping. Found {len(all_links)} total documents")
+    # After scraping, filter out already processed links before returning
+    existing_doc_ids = db.get_existing_doc_ids(db_path)
+    new_links = [link for link in all_links if link['doc_id'] not in existing_doc_ids]
     
-    # Filter out documents already in database
-    new_links = filter_new_documents(all_links)
-    logging.info(f"Found {len(new_links)} new documents to process")
+    logging.info(f"Scraped {len(all_links)} total links, {len(new_links)} are new")
     
+    # Save all links to file for caching
+    with open(LINKS_FILE, 'w') as f:
+        json.dump(all_links, f, indent=2)
+        
     return new_links
 
 def filter_new_documents(all_links):
@@ -726,7 +731,7 @@ def get_force_rescrape_option():
         except ValueError:
             print("Please enter 'y' or 'n'.")
 
-def main():
+def main(db_path=None):
     """Main function coordinating the entire process."""
     start_time = time.time()
     
@@ -738,7 +743,7 @@ def main():
     
     # Initialize database
     try:
-        db.create_tables()
+        db.create_tables(db_path)
         logging.info("Database tables ensured/created successfully")
     except Exception as e:
         logging.error(f"Fatal error during database table creation: {e}")
@@ -762,7 +767,7 @@ def main():
         logging.info("Using optimized scraping - will check existing links first")
     
     # Step 1: Scrape all PTR links (with optimization)
-    all_links = scrape_all_ptr_links(force_rescrape=force_rescrape)
+    all_links = scrape_all_ptr_links(force_rescrape=force_rescrape, db_path=db_path)
     
     if not all_links:
         logging.info("No new documents found to process. Exiting.")

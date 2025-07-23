@@ -1,4 +1,6 @@
 // /app/api/members/[id]/trades/route.ts
+// Handler signature matches Next.js App Router dynamic API route requirements
+// GET(request: Request, { params }: { params: Promise<{ id: string }> })
 
 import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
@@ -7,9 +9,10 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const memberId = Number(params.id);
+  const { id } = await params;
+  const memberId = Number(id);
   if (isNaN(memberId)) {
     return NextResponse.json({ error: 'Invalid member ID.' }, { status: 400 });
   }

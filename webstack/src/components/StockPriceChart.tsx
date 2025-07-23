@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { PriceDataPoint, TradeDataPoint } from '@/src/lib/priceDataService';
 
 type Props = {
@@ -82,7 +81,7 @@ export default function StockPriceChart({
     }
 
     // Draw price line
-    ctx.strokeStyle = '#3b82f6';
+    ctx.strokeStyle = 'var(--c-jade)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     
@@ -109,7 +108,7 @@ export default function StockPriceChart({
       
       if (trade.type === 'buy') {
         // Buy pin (green, above line, pointing down)
-        ctx.fillStyle = '#10b981';
+        ctx.fillStyle = 'var(--c-jade)';
         ctx.beginPath();
         ctx.moveTo(x, y - 15);
         ctx.lineTo(x - pinSize/2, y - 5);
@@ -118,7 +117,7 @@ export default function StockPriceChart({
         ctx.fill();
         
         // Pin stick
-        ctx.strokeStyle = '#10b981';
+        ctx.strokeStyle = 'var(--c-jade)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, y - 5);
@@ -126,7 +125,7 @@ export default function StockPriceChart({
         ctx.stroke();
       } else {
         // Sell pin (red, below line, pointing up)
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = 'var(--c-error)';
         ctx.beginPath();
         ctx.moveTo(x, y + 15);
         ctx.lineTo(x - pinSize/2, y + 5);
@@ -135,7 +134,7 @@ export default function StockPriceChart({
         ctx.fill();
         
         // Pin stick
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = 'var(--c-error)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, y + 5);
@@ -145,7 +144,7 @@ export default function StockPriceChart({
     });
 
     // Draw axes labels
-    ctx.fillStyle = '#9ca3af';
+    ctx.fillStyle = 'var(--c-navy)';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     

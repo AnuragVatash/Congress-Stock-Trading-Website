@@ -1,3 +1,5 @@
+export const dynamic = 'error';
+export const revalidate = 0;
 // webstack/src/app/members/page.tsx
 // OPTIMIZED VERSION - Uses SQL aggregation instead of loading 46K+ transactions into JavaScript
 
@@ -7,34 +9,6 @@ import Image from 'next/image';
 import MembersTable from '@/src/components/MembersTable';
 
 const prisma = new PrismaClient();
-
-type MemberWithStats = {
-  member_id: number;
-  name: string;
-  photo_url: string | null;
-  party: string | null;
-  state: string | null;
-  chamber: string | null;
-  tradeCount: number;
-  totalVolume: number;
-  latestTradeDate: Date | null;
-};
-
-type StateStats = {
-  state: string;
-  memberCount: number;
-  totalTrades: number;
-  totalVolume: number;
-  avgTradesPerMember: number;
-};
-
-type PartyStats = {
-  party: string;
-  memberCount: number;
-  totalTrades: number;
-  totalVolume: number;
-  avgVolumePerMember: number;
-};
 
 function formatCurrency(value: number): string {
   if (value >= 1e9) {
@@ -223,17 +197,21 @@ export default async function MembersPage() {
   console.log(`🚀 TOTAL PAGE TIME: ${(pageEnd - pageStart).toFixed(2)}ms`);
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen" style={{ background: 'var(--c-navy)', color: 'var(--c-navy)' }}>
+      {/* Congress Alpha Brand */}
+      <div className="w-full" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
+        <span className="text-3xl font-extrabold" style={{ color: '#fff' }}>Congress Alpha</span>
+      </div>
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="card" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
           <div className="flex items-center mb-4">
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mr-4">
+            <Link href="/" className="button-secondary">
               ← Back to Home
             </Link>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Congressional Members</h1>
-          <p className="text-xl text-gray-400">
+          <h1 className="text-4xl font-bold mb-4 text-white" style={{ color: 'var(--c-jade)' }}>Congressional Members</h1>
+          <p className="text-xl text-white">
             Comprehensive analysis of trading patterns across Congress
           </p>
         </div>
@@ -269,7 +247,7 @@ export default async function MembersPage() {
           <h2 className="text-2xl font-bold text-white mb-6">House vs Senate</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h3 className="text-xl font-semibold text-white mb-4">House of Representatives</h3>
+              <h3 className="text-xl font-semibold mb-4">House of Representatives</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Active Traders:</span>
@@ -292,7 +270,7 @@ export default async function MembersPage() {
               </div>
             </div>
             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h3 className="text-xl font-semibold text-white mb-4">Senate</h3>
+              <h3 className="text-xl font-semibold mb-4">Senate</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Active Traders:</span>
@@ -323,7 +301,7 @@ export default async function MembersPage() {
           <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-700">
+                <thead style={{ background: 'var(--c-navy-700)', color: '#fff' }}>
                   <tr className="text-left">
                     <th className="px-6 py-4 text-sm font-medium text-gray-300">Party</th>
                     <th className="px-6 py-4 text-sm font-medium text-gray-300">Members</th>
@@ -334,7 +312,7 @@ export default async function MembersPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {partyStats.map((party) => (
-                    <tr key={party.party} className="hover:bg-gray-700/50 transition-colors">
+                    <tr key={party.party} className="hover:bg-[var(--c-jade-100)]">
                       <td className="px-6 py-4">
                         <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
                           party.party === 'Republican' 

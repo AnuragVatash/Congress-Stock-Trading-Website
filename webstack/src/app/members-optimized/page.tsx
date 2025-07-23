@@ -8,32 +8,10 @@ import MembersTable from '@/src/components/MembersTable';
 
 const prisma = new PrismaClient();
 
-type MemberWithStats = {
-  member_id: number;
-  name: string;
-  photo_url: string | null;
-  party: string | null;
-  state: string | null;
-  chamber: string | null;
-  tradeCount: number;
-  totalVolume: number;
-  latestTradeDate: Date | null;
-};
-
-type StateStats = {
-  state: string;
+type ChamberStats = {
   memberCount: number;
   totalTrades: number;
   totalVolume: number;
-  avgTradesPerMember: number;
-};
-
-type PartyStats = {
-  party: string;
-  memberCount: number;
-  totalTrades: number;
-  totalVolume: number;
-  avgVolumePerMember: number;
 };
 
 function formatCurrency(value: number): string {
@@ -214,7 +192,7 @@ async function getChamberStatsOptimized() {
       ORDER BY total_volume DESC
     `;
 
-    const chamberMap = new Map<string, any>();
+    const chamberMap = new Map<string, ChamberStats>();
     result.forEach(row => {
       chamberMap.set(row.chamber, {
         memberCount: Number(row.member_count),
@@ -256,21 +234,22 @@ export default async function OptimizedMembersPage() {
   const totalVolume = membersWithStats.reduce((sum, m) => sum + m.totalVolume, 0);
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen" style={{ background: 'var(--c-navy)', color: 'var(--c-navy)' }}>
+      {/* Congress Alpha Brand */}
+      <div className="w-full" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
+        <span className="text-3xl font-extrabold" style={{ color: '#fff' }}>Congress Alpha</span>
+      </div>
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="card" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
           <div className="flex items-center mb-4">
-            <Link href="/members" className="text-blue-400 hover:text-blue-300 mr-4">
-              ← Compare with Original
+            <Link href="/" className="button-secondary">
+              ← Back to Home
             </Link>
-            <div className="bg-green-900 text-green-300 px-3 py-1 rounded-full text-sm font-semibold">
-              ✨ OPTIMIZED VERSION
-            </div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Congressional Members</h1>
-          <p className="text-xl text-gray-400">
-            SQL-optimized version - No more loading 46K+ transactions into memory!
+          <h1 className="text-4xl font-bold mb-4 text-white" style={{ color: 'var(--c-jade)' }}>Congressional Members</h1>
+          <p className="text-xl text-white">
+            Comprehensive analysis of trading patterns across Congress
           </p>
         </div>
 
@@ -378,7 +357,7 @@ export default async function OptimizedMembersPage() {
           <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-700">
+                <thead style={{ background: 'var(--c-navy-700)', color: '#fff' }}>
                   <tr className="text-left">
                     <th className="px-6 py-4 text-sm font-medium text-gray-300">Party</th>
                     <th className="px-6 py-4 text-sm font-medium text-gray-300">Members</th>
@@ -389,7 +368,7 @@ export default async function OptimizedMembersPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {partyStats.map((party) => (
-                    <tr key={party.party} className="hover:bg-gray-700/50 transition-colors">
+                    <tr key={party.party} className="hover:bg-[var(--c-jade-100)]">
                       <td className="px-6 py-4">
                         <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
                           party.party === 'Republican' 
