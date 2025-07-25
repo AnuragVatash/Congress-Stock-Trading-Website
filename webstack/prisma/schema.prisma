@@ -34,6 +34,8 @@ model Assets {
   asset_id     Int            @id @default(autoincrement())
   company_name String
   ticker       String?
+  ticker_clean String?
+  company_clean String?
   created_at   DateTime?      @default(now())
   Transactions Transactions[]
 
@@ -83,8 +85,8 @@ model Transactions {
   owner_code        String?
   transaction_type  String
   transaction_date DateTime? @map("transaction_date")
-  amount_range_low  Int?
-  amount_range_high Int?
+  amount_range_low  Float?
+  amount_range_high Float?
   raw_llm_csv_line  String?
   created_at        DateTime? @default(now())
   Assets            Assets    @relation(fields: [asset_id], references: [asset_id], onDelete: NoAction, onUpdate: NoAction)
