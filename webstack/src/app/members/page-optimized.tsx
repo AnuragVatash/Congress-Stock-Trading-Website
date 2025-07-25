@@ -1,12 +1,10 @@
 // webstack/src/app/members/page-optimized.tsx
 // OPTIMIZED VERSION - Uses SQL aggregation instead of JavaScript processing
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import Link from 'next/link';
 import Image from 'next/image';
 import MembersTable from '@/src/components/MembersTable';
-
-const prisma = new PrismaClient();
 
 type ChamberStats = {
   memberCount: number;
@@ -76,9 +74,9 @@ async function getMembersDataOptimized() {
         COUNT(t.transaction_id) as trade_count,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume,
         MAX(t.transaction_date) as latest_trade_date
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       GROUP BY m.member_id, m.name, m.photo_url, m.party, m.state, m.chamber
       HAVING COUNT(t.transaction_id) > 0
       ORDER BY total_volume DESC
@@ -116,9 +114,9 @@ async function getStateStatsOptimized() {
         COUNT(DISTINCT m.member_id) as member_count,
         COUNT(t.transaction_id) as total_trades,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       WHERE m.state IS NOT NULL
       GROUP BY m.state
       HAVING COUNT(t.transaction_id) > 0
@@ -150,9 +148,9 @@ async function getPartyStatsOptimized() {
         COUNT(DISTINCT m.member_id) as member_count,
         COUNT(t.transaction_id) as total_trades,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       WHERE m.party IS NOT NULL
       GROUP BY m.party
       HAVING COUNT(t.transaction_id) > 0
@@ -183,9 +181,9 @@ async function getChamberStatsOptimized() {
         COUNT(DISTINCT m.member_id) as member_count,
         COUNT(t.transaction_id) as total_trades,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       WHERE m.chamber IS NOT NULL
       GROUP BY m.chamber
       HAVING COUNT(t.transaction_id) > 0

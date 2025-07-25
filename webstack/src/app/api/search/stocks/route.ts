@@ -1,10 +1,8 @@
 // webstack/src/app/api/search/stocks/route.ts
 // OPTIMIZED - Uses SQL aggregation instead of loading all transactions
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { NextResponse } from 'next/server';
-
-const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -32,9 +30,9 @@ export async function GET(request: Request) {
         a.company_name,
         COUNT(t.transaction_id) as trade_count,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Assets a
-      LEFT JOIN Transactions t ON a.asset_id = t.asset_id
-      WHERE (a.ticker LIKE '%' || ${query} || '%' OR a.company_name LIKE '%' || ${query} || '%')
+      FROM "Assets" a
+      LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id
+      WHERE (a.ticker ILIKE '%' || ${query} || '%' OR a.company_name ILIKE '%' || ${query} || '%')
       GROUP BY a.asset_id, a.ticker, a.company_name
       HAVING COUNT(t.transaction_id) > 0
       ORDER BY 

@@ -1,7 +1,7 @@
 // webstack/src/app/stocks/[id]/page.tsx
 // OPTIMIZED - Uses SQL aggregation for statistics instead of JavaScript processing
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -13,10 +13,8 @@ import {
   generateTradeDataPoints 
 } from '@/src/lib/priceDataService';
 
-const prisma = new PrismaClient();
-
 export async function generateStaticParams() {
-  const topStocks = await prisma.$queryRaw<Array<{ asset_id: number }>>`SELECT a.asset_id FROM Assets a LEFT JOIN Transactions t ON a.asset_id = t.asset_id GROUP BY a.asset_id HAVING COUNT(t.transaction_id) > 0 ORDER BY COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) DESC LIMIT 10`;
+  const topStocks = await prisma.$queryRaw<Array<{ asset_id: number }>>`SELECT a.asset_id FROM "Assets" a LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id GROUP BY a.asset_id HAVING COUNT(t.transaction_id) > 0 ORDER BY COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) DESC LIMIT 10`;
   return topStocks.map((s) => ({ id: String(s.asset_id) }));
 }
 
@@ -60,14 +58,14 @@ async function getStockStatistics(assetId: number) {
           COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume,
           COUNT(DISTINCT t.transaction_id) as trade_count,
           COUNT(t.transaction_id) as total_transactions
-        FROM Transactions t
+        FROM "Transactions" t
         WHERE t.asset_id = ${assetId}
       `,
       
       // Buy transactions count
       prisma.$queryRaw<Array<{ buy_count: bigint }>>`
         SELECT COUNT(t.transaction_id) as buy_count
-        FROM Transactions t
+        FROM "Transactions" t
         WHERE t.asset_id = ${assetId} 
         AND LOWER(t.transaction_type) LIKE '%purchase%'
       `,
@@ -75,7 +73,7 @@ async function getStockStatistics(assetId: number) {
       // Sell transactions count  
       prisma.$queryRaw<Array<{ sell_count: bigint }>>`
         SELECT COUNT(t.transaction_id) as sell_count
-        FROM Transactions t
+        FROM "Transactions" t
         WHERE t.asset_id = ${assetId}
         AND LOWER(t.transaction_type) LIKE '%sale%'
       `,
@@ -96,9 +94,9 @@ async function getStockStatistics(assetId: number) {
           m.chamber,
           COUNT(t.transaction_id) as trade_count,
           COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-        FROM Transactions t
-        JOIN Filings f ON t.filing_id = f.filing_id
-        JOIN Members m ON f.member_id = m.member_id
+        FROM "Transactions" t
+        JOIN "Filings" f ON t.filing_id = f.filing_id
+        JOIN "Members" m ON f.member_id = m.member_id
         WHERE t.asset_id = ${assetId}
         GROUP BY m.member_id, m.name, m.party, m.chamber
         ORDER BY trade_count DESC

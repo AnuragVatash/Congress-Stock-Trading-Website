@@ -1,14 +1,9 @@
 // /app/members/[id]/page.tsx
-// OPTIMIZED - Loads only necessary data with performance monitoring
+// This is now a pure Server Component for data fetching.
 
-import MemberProfileCard from "@/src/components/MemberProfileCard";
-import TradesTable from "@/src/components/TradesTable";
-import MemberTradingCharts from "@/src/components/MemberTradingCharts";
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-
-const prisma = new PrismaClient();
+import MemberProfileView from '@/src/components/MemberProfileView';
 
 // Performance monitoring functions
 async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>): Promise<T> {
@@ -23,7 +18,7 @@ async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>):
 
 export async function generateStaticParams() {
   // 1. Top 5 featured members (by trade count)
-  const featured = await prisma.$queryRaw<Array<{ member_id: number }>>`SELECT m.member_id FROM Members m LEFT JOIN Filings f ON m.member_id = f.member_id LEFT JOIN Transactions t ON f.filing_id = t.filing_id GROUP BY m.member_id HAVING COUNT(t.transaction_id) > 0 ORDER BY COUNT(t.transaction_id) DESC LIMIT 5`;
+  const featured = await prisma.$queryRaw<Array<{ member_id: number }>>`SELECT m.member_id FROM "Members" m LEFT JOIN "Filings" f ON m.member_id = f.member_id LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id GROUP BY m.member_id HAVING COUNT(t.transaction_id) > 0 ORDER BY COUNT(t.transaction_id) DESC LIMIT 5`;
   // 2. Members in the 10 most recent trades
   const recent = await prisma.transactions.findMany({
     include: { Filings: { include: { Members: true } } },
@@ -31,7 +26,7 @@ export async function generateStaticParams() {
     take: 10
   });
   // 3. Top 10 by total volume (from /members page)
-  const topVolume = await prisma.$queryRaw<Array<{ member_id: number }>>`SELECT m.member_id FROM Members m LEFT JOIN Filings f ON m.member_id = f.member_id LEFT JOIN Transactions t ON f.filing_id = t.filing_id GROUP BY m.member_id HAVING COUNT(t.transaction_id) > 0 ORDER BY COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) DESC LIMIT 10`;
+  const topVolume = await prisma.$queryRaw<Array<{ member_id: number }>>`SELECT m.member_id FROM "Members" m LEFT JOIN "Filings" f ON m.member_id = f.member_id LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id GROUP BY m.member_id HAVING COUNT(t.transaction_id) > 0 ORDER BY COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) DESC LIMIT 10`;
 
   // Collect all IDs
   const ids = [
@@ -87,30 +82,5 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   console.log(`🚀 MEMBER: TOTAL PAGE TIME: ${(pageEnd - pageStart).toFixed(2)}ms`);
   console.log(`📊 MEMBER: Loaded ${trades.length} transactions for ${member.name}`);
 
-  return (
-    <div className="min-h-screen" style={{ background: 'var(--c-navy)' }}>
-      <div className="max-w-7xl mx-auto p-4 md:p-8">
-        <div className="card" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
-          <div className="flex items-center mb-4">
-            <Link href="/" className="button-secondary">
-              ← Back to Home
-            </Link>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          <div className="lg:col-span-1">
-            <MemberProfileCard member={member} trades={trades} />
-          </div>
-          <div className="lg:col-span-2">
-            <TradesTable trades={trades} />
-          </div>
-        </div>
-        
-        {/* Trading Charts Section */}
-        <div className="mt-8">
-          <MemberTradingCharts trades={trades} memberName={member.name} />
-        </div>
-      </div>
-    </div>
-  );
+  return <MemberProfileView member={member} trades={trades} />;
 }

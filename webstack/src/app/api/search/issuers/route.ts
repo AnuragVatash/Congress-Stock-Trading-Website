@@ -1,10 +1,8 @@
 // webstack/src/app/api/search/issuers/route.ts
 // API endpoint for searching issuers with complete data structure for IssuersTable
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { NextResponse } from 'next/server';
-
-const prisma = new PrismaClient();
 
 // Mock function to generate sector based on company name  
 function inferSector(companyName: string): string {
@@ -76,10 +74,10 @@ export async function GET(request: Request) {
         COUNT(t.transaction_id) as trade_count,
         COUNT(DISTINCT f.member_id) as politician_count,
         MAX(t.transaction_date) as last_traded
-      FROM Assets a
-      LEFT JOIN Transactions t ON a.asset_id = t.asset_id
-      LEFT JOIN Filings f ON t.filing_id = f.filing_id
-      WHERE (a.ticker LIKE '%' || ${query} || '%' OR a.company_name LIKE '%' || ${query} || '%')
+      FROM "Assets" a
+      LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id
+      LEFT JOIN "Filings" f ON t.filing_id = f.filing_id
+      WHERE (a.ticker ILIKE '%' || ${query} || '%' OR a.company_name ILIKE '%' || ${query} || '%')
       GROUP BY a.asset_id, a.company_name, a.ticker
       HAVING COUNT(t.transaction_id) > 0
       ORDER BY 

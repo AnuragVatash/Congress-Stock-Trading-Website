@@ -3,12 +3,10 @@ export const revalidate = 0;
 // webstack/src/app/members/page.tsx
 // OPTIMIZED VERSION - Uses SQL aggregation instead of loading 46K+ transactions into JavaScript
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import Link from 'next/link';
 import Image from 'next/image';
 import MembersTable from '@/src/components/MembersTable';
-
-const prisma = new PrismaClient();
 
 function formatCurrency(value: number): string {
   if (value >= 1e9) {
@@ -72,9 +70,9 @@ async function getMembersData() {
         COUNT(t.transaction_id) as trade_count,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume,
         MAX(t.transaction_date) as latest_trade_date
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       GROUP BY m.member_id, m.name, m.photo_url, m.party, m.state, m.chamber
       HAVING COUNT(t.transaction_id) > 0
       ORDER BY total_volume DESC
@@ -112,9 +110,9 @@ async function getStateStats() {
         COUNT(DISTINCT m.member_id) as member_count,
         COUNT(t.transaction_id) as total_trades,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       WHERE m.state IS NOT NULL
       GROUP BY m.state
       HAVING COUNT(t.transaction_id) > 0
@@ -146,9 +144,9 @@ async function getPartyStats() {
         COUNT(DISTINCT m.member_id) as member_count,
         COUNT(t.transaction_id) as total_trades,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       WHERE m.party IS NOT NULL
       GROUP BY m.party
       HAVING COUNT(t.transaction_id) > 0
@@ -198,18 +196,15 @@ export default async function MembersPage() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--c-navy)', color: 'var(--c-navy)' }}>
-      {/* Congress Alpha Brand */}
-      <div className="w-full" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
-        <span className="text-3xl font-extrabold" style={{ color: '#fff' }}>Congress Alpha</span>
+      {/* Back button in top left corner */}
+      <div style={{ margin: '1.5rem 0 0 1.5rem', position: 'absolute', top: 0, left: 0 }}>
+        <Link href="/">
+          <Image src="/return.png" alt="Back to Home" width={40} height={40} style={{ cursor: 'pointer' }} />
+        </Link>
       </div>
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         {/* Header */}
         <div className="card" style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}>
-          <div className="flex items-center mb-4">
-            <Link href="/" className="button-secondary">
-              ← Back to Home
-            </Link>
-          </div>
           <h1 className="text-4xl font-bold mb-4 text-white" style={{ color: 'var(--c-jade)' }}>Congressional Members</h1>
           <p className="text-xl text-white">
             Comprehensive analysis of trading patterns across Congress

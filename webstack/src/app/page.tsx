@@ -45,9 +45,9 @@ const getFeaturedPoliticiansOptimized = async () => {
         m.chamber,
         COUNT(t.transaction_id) as trade_count,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Members m
-      LEFT JOIN Filings f ON m.member_id = f.member_id
-      LEFT JOIN Transactions t ON f.filing_id = t.filing_id
+      FROM "Members" m
+      LEFT JOIN "Filings" f ON m.member_id = f.member_id
+      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
       GROUP BY m.member_id, m.name, m.photo_url, m.party, m.state, m.chamber
       HAVING COUNT(t.transaction_id) > 0
       ORDER BY trade_count DESC
@@ -81,8 +81,8 @@ const getTopStocksOptimized = async () => {
         a.company_name,
         COUNT(t.transaction_id) as trade_count,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM Assets a
-      LEFT JOIN Transactions t ON a.asset_id = t.asset_id
+      FROM "Assets" a
+      LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id
       WHERE a.ticker IS NOT NULL
       GROUP BY a.asset_id, a.ticker, a.company_name
       HAVING COUNT(t.transaction_id) > 0
@@ -107,7 +107,7 @@ const getPlatformStatsOptimized = async () => {
       prisma.members.count(),
       prisma.$queryRaw<Array<{ total_volume: number }>>`
         SELECT COALESCE(SUM((amount_range_low + amount_range_high) / 2.0), 0) as total_volume
-        FROM Transactions
+        FROM "Transactions"
       `
     ]);
 

@@ -365,7 +365,7 @@ export default function IssuersTable({ issuers }: Props) {
                 placeholder="Search ALL companies or tickers (2+ chars)..."
                 value={issuerSearchDisplay}
                 onChange={handleIssuerSearchChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-400"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-700 focus:outline-none focus:border-blue-400"
               />
               {isSearching && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -385,7 +385,7 @@ export default function IssuersTable({ issuers }: Props) {
               placeholder="Search by politician (2+ chars)..."
               value={politicianSearchDisplay}
               onChange={handlePoliticianSearchChange}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-400"
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-700 focus:outline-none focus:border-blue-400"
             />
           </div>
 
@@ -397,11 +397,11 @@ export default function IssuersTable({ issuers }: Props) {
             <select
               value={sectorFilter}
               onChange={handleSectorFilterChange}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-400"
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:border-blue-400"
             >
-              <option value="">All Sectors</option>
+              <option value="" className="text-gray-900 bg-white">All Sectors</option>
               {sectors.map((sector: string) => (
-                <option key={sector} value={sector}>{sector.replace(/"/g, '&quot;')}</option>
+                <option key={sector} value={sector} className="text-gray-900 bg-white">{sector.replace(/"/g, '&quot;')}</option>
               ))}
             </select>
           </div>

@@ -198,7 +198,7 @@ export default function MembersTable({ members }: Props) {
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-400"
+              className="px-3 py-2 !bg-gray-700 !border-gray-700 !text-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -213,7 +213,7 @@ export default function MembersTable({ members }: Props) {
               placeholder="Search members (2+ chars)..."
               value={searchDisplay}
               onChange={handleSearchChange}
-              className="w-full sm:w-64 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-400"
+              className="w-full sm:w-64 px-4 py-2 !bg-gray-700 !border-gray-700 rounded-lg text-gray-200 placeholder-gray-400 focus:outline-none focus:border-blue-400"
             />
             <svg 
               className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
@@ -281,7 +281,7 @@ export default function MembersTable({ members }: Props) {
             </thead>
             <tbody className="divide-y divide-gray-700">
               {displayedMembers.map((member) => (
-                <tr key={member.member_id} className="hover:bg-[var(--c-jade-100)] transition-colors">
+                <tr key={member.member_id} className="hover:bg-gray-900 transition-colors">
                   <td className="px-6 py-4">
                     <Link 
                       href={`/members/${member.member_id}`}
@@ -301,7 +301,7 @@ export default function MembersTable({ members }: Props) {
                           </div>
                         )}
                       </div>
-                      <span className="font-medium" style={{ color: 'var(--c-navy)' }}>{member.name}</span>
+                      <span className="font-medium text-gray-300">{member.name}</span>
                     </Link>
                   </td>
                   <td className="px-6 py-4">
