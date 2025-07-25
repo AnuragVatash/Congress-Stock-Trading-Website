@@ -13,13 +13,8 @@ import {
   generateTradeDataPoints 
 } from '@/src/lib/priceDataService';
 
-export async function generateStaticParams() {
-  const topStocks = await prisma.$queryRaw<Array<{ asset_id: number }>>`SELECT a.asset_id FROM "Assets" a LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id GROUP BY a.asset_id HAVING COUNT(t.transaction_id) > 0 ORDER BY COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) DESC LIMIT 10`;
-  return topStocks.map((s) => ({ id: String(s.asset_id) }));
-}
-
-export const revalidate = 3600;
-export const dynamicParams = true;
+// Force dynamic rendering to avoid build-time database queries
+export const dynamic = 'force-dynamic';
 
 // Performance monitoring functions
 async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>): Promise<T> {
