@@ -188,7 +188,7 @@ export default function SearchSection() {
   }, [setStockSearch]);
 
   return (
-    <div style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16 }}>
+    <div id="search" style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16, scrollMarginTop: 72 }}>
       <section 
         className="rounded-lg card" 
         style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}
