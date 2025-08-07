@@ -1,6 +1,21 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+
 // webstack/src/components/HeroSection.tsx
 
-export default function HeroSection({ lastUpdate }: { lastUpdate: string }) {
+export default function HeroSection({ lastUpdateDate }: { lastUpdateDate: Date | null | undefined }) {
+  const [lastUpdate, setLastUpdate] = useState('');
+
+  useEffect(() => {
+    if (lastUpdateDate) {
+      setLastUpdate(formatDistanceToNow(new Date(lastUpdateDate), { addSuffix: true }));
+    } else {
+      setLastUpdate('Unknown');
+    }
+  }, [lastUpdateDate]);
+
   return (
     <section
       className="rounded-lg shadow-lg mb-8"
@@ -19,8 +34,12 @@ export default function HeroSection({ lastUpdate }: { lastUpdate: string }) {
           <span style={{ color: 'var(--c-jade)' }}>Transparency</span> in congressional trading through comprehensive data analysis.
         </p>
         <div className="mb-6">
-          <span className="inline-block px-4 py-2 rounded-full font-semibold" style={{ background: 'var(--c-jade-100)', color: 'var(--c-navy)' }}>
-            Last updated: {lastUpdate}
+          <span
+            className="inline-block px-4 py-2 rounded-full font-semibold"
+            style={{ background: 'var(--c-jade-100)', color: 'var(--c-navy)' }}
+            suppressHydrationWarning
+          >
+            Last updated: {lastUpdate || '...'}
           </span>
         </div>
         <a href="#search" className="button-primary">

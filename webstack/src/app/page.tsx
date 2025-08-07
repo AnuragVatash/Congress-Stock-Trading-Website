@@ -8,7 +8,6 @@ import SearchSection from '@/src/components/SearchSection';
 import StatsGrid from '@/src/components/StatsGrid';
 import RecentTradesHome from '@/src/components/RecentTradesHome';
 import { prisma } from '@/src/lib/prisma';
-import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -71,12 +70,14 @@ const getFeaturedPoliticiansOptimized = async () => {
 const getTopStocksOptimized = async () => {
   return measureTimeAsync('Top Stocks SQL Query', async () => {
     const result = await prisma.$queryRaw<Array<{
+      asset_id: number;
       ticker: string;
       company_name: string;
       trade_count: bigint;
       total_volume: number;
     }>>`
       SELECT 
+        a.asset_id,
         a.ticker,
         a.company_name,
         COUNT(t.transaction_id) as trade_count,
@@ -91,6 +92,7 @@ const getTopStocksOptimized = async () => {
     `;
 
     return result.map(row => ({
+      asset_id: row.asset_id,
       ticker: row.ticker || 'N/A',
       company_name: row.company_name,
       tradeCount: Number(row.trade_count),
@@ -158,11 +160,6 @@ export default async function Home() {
     )
   ]);
 
-  // Format the last update time
-  const lastUpdate = latestApiRequest?.created_at 
-    ? formatDistanceToNow(new Date(latestApiRequest.created_at), { addSuffix: true })
-    : 'Unknown';
-
   const pageEnd = performance.now();
   console.log(`🚀 HOME: TOTAL PAGE TIME: ${(pageEnd - pageStart).toFixed(2)}ms`);
 
@@ -197,11 +194,16 @@ export default async function Home() {
     return `${value}`;
   }
 
-  // Helper to format date
+  // Helper to format date with deterministic locale and timezone to avoid hydration mismatches
   function formatDate(date: Date | string | null) {
     if (!date) return '';
     const d = date instanceof Date ? date : new Date(date);
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    try {
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+    } catch {
+      // Fallback: ISO slice
+      return d.toISOString().slice(0, 10);
+    }
   }
 
   // Use the topTransactions for the ticker
@@ -270,7 +272,7 @@ export default async function Home() {
         <div style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16, background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderRadius: '0.75rem', border: '1px solid #fff' }}>
           <div className="grid lg:grid-cols-12 gap-6">
             {/* Left Sidebar - Featured Members */}
-            <div className="lg:col-span-3 hidden lg:block">
+            <div className="lg:col-span-3 order-2 lg:order-1">
               <div 
                 className="rounded-lg p-6 border h-full"
                 style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderColor: 'var(--c-navy-600)' }}
@@ -324,12 +326,12 @@ export default async function Home() {
             </div>
 
             {/* Center - Hero Section */}
-            <div className="lg:col-span-6">
-              <HeroSection lastUpdate={lastUpdate} />
+            <div className="lg:col-span-6 order-1 lg:order-2">
+              <HeroSection lastUpdateDate={latestApiRequest?.created_at} />
             </div>
 
             {/* Right Sidebar - Top Traded Stocks */}
-            <div className="lg:col-span-3 hidden lg:block">
+            <div className="lg:col-span-3 order-3 lg:order-3">
               <div 
                 className="rounded-lg p-6 border h-full"
                 style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderColor: 'var(--c-navy-600)' }}
@@ -342,9 +344,10 @@ export default async function Home() {
                 </div>
                 <div className="space-y-2 overflow-hidden" style={{ height: '408px' }}>
                   {topStocks.slice(0, 5).map((stock) => (
-                    <div
+                    <Link
                       key={stock.ticker}
-                      className="block bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors cursor-pointer"
+                      href={`/stocks/${(stock as any).asset_id}`}
+                      className="block bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors"
                       style={{ height: '76px' }}
                     >
                       <div className="flex items-center justify-between h-full">
@@ -361,7 +364,7 @@ export default async function Home() {
                           <div className="text-white font-semibold text-sm">${((stock.totalVolume / 1000000) | 0)}M</div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
