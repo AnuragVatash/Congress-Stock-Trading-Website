@@ -17,13 +17,14 @@ export default function PerformanceMonitor({ componentName, enabled = false }: P
     const startTime = performance.now();
     startTimeRef.current = startTime;
     renderCountRef.current++;
+    const renderCountAtUnmount = renderCountRef.current;
 
     return () => {
       const endTime = performance.now();
-      const duration = endTime - startTimeRef.current;
+      const duration = endTime - startTime;
       
       if (duration > 10) { // Only log if operation takes more than 10ms
-        console.warn(`🚀 Performance: ${componentName} render #${renderCountRef.current} took ${duration.toFixed(2)}ms`);
+        console.warn(`🚀 Performance: ${componentName} render #${renderCountAtUnmount} took ${duration.toFixed(2)}ms`);
       }
     };
   });

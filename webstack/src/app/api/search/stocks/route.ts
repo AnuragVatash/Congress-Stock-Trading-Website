@@ -31,10 +31,9 @@ export async function GET(request: Request) {
         COUNT(t.transaction_id) as trade_count,
         COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
       FROM "Assets" a
-      LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id
+      JOIN "Transactions" t ON a.asset_id = t.asset_id
       WHERE (a.ticker ILIKE '%' || ${query} || '%' OR a.company_name ILIKE '%' || ${query} || '%')
       GROUP BY a.asset_id, a.ticker, a.company_name
-      HAVING COUNT(t.transaction_id) > 0
       ORDER BY 
         CASE 
           WHEN a.ticker LIKE ${query} || '%' THEN 1

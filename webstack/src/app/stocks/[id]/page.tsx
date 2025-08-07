@@ -192,7 +192,7 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
             {/* Stock Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="card" style={{ background: 'var(--c-neutral-50)' }}>
-                <div className="text-2xl font-bold">{totalTrades}</div>
+                <div className="text-2xl font-bold text-[#0d1b2a]">{totalTrades}</div>
                 <div className="text-sm" style={{ color: 'var(--c-secondary-text)' }}>Total Trades</div>
               </div>
               <div className="card" style={{ background: 'var(--c-neutral-50)' }}>

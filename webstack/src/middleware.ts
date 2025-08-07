@@ -1,7 +1,6 @@
-import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-export function middleware(req: NextRequest) {
+export function middleware() {
   const res = NextResponse.next();
 
   // Only enforce security headers in production to avoid breaking Next.js dev HMR/Turbopack

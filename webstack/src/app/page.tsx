@@ -10,6 +10,7 @@ import RecentTradesHome from '@/src/components/RecentTradesHome';
 import { prisma } from '@/src/lib/prisma';
 import Link from 'next/link';
 import Image from 'next/image';
+import TickerBar from '@/src/components/TickerBar';
 import { unstable_cache } from 'next/cache';
 
 // Performance monitoring functions
@@ -233,50 +234,8 @@ export default async function Home() {
     <div className="min-h-screen" style={{ background: 'linear-gradient(120deg, var(--c-navy-50) 0%, var(--c-gray-50) 100%)', color: 'var(--c-navy)' }}>
       {/* Top Ticker Bar Only */}
       <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', background: 'linear-gradient(90deg, var(--c-navy), var(--c-navy-600))', color: '#fff', minHeight: '56px', display: 'flex', alignItems: 'center', overflow: 'hidden', zIndex: 100 }}>
-        {/* Ticker */}
-        <div style={{ width: '100%', overflow: 'hidden', height: '56px', display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'stretch',
-              whiteSpace: 'nowrap',
-              animation: 'ticker-scroll-ltr 93s linear infinite',
-              fontSize: '1rem',
-              gap: '0',
-            }}
-          >
-            {tickerTrades.concat(tickerTrades).map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minWidth: '180px',
-                  padding: '0 1.25rem',
-                  marginRight: 0,
-                  fontWeight: 500,
-                  color: item.type === 'Purchase' ? '#4AC088' : '#E74C3C',
-                  borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.18)',
-                }}
-              >
-                <span>{item.member} {item.ticker} {item.amount} {item.type}</span>
-                <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.7)', marginTop: 2, textAlign: 'center', fontWeight: 400 }}>
-                  {item.date}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Ticker CSS */}
-        <style>{`
-          @keyframes ticker-scroll-ltr {
-            0% { transform: translateX(-50%); }
-            100% { transform: translateX(0); }
-          }
-          body { margin-top: 56px !important; }
-        `}</style>
+        <TickerBar items={tickerTrades} />
+        <style>{`body { margin-top: 56px !important; }`}</style>
       </div>
       {/* Hero Section with Sidebars */}
       <div className="relative py-4 px-4">
