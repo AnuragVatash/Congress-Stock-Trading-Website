@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Security headers now handled in middleware for environment-aware behavior
   images: {
     remotePatterns: [
       {
