@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { DebugPerformance } from "@/src/components/DebugPerformance";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,8 +39,16 @@ export default function RootLayout({
         </header>
         {process.env.NODE_ENV === 'development' && <DebugPerformance />}
         <main>{children}</main>
-        <Analytics />
-        <SpeedInsights />
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            {/* Disguised Vercel analytics and speed insights to mitigate ad blockers */}
+            <Script id="va-inline" strategy="afterInteractive">{`
+              window.va = window.va || function() { (window.vaq = window.vaq || []).push(arguments); };
+            `}</Script>
+            <Script async src="/va/script.js" data-endpoint="/va" strategy="afterInteractive" />
+            <Script async src="/vs/script.js" data-endpoint="/vs" strategy="afterInteractive" />
+          </>
+        )}
       </body>
     </html>
   );

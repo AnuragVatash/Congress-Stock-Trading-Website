@@ -10,6 +10,7 @@ import RecentTradesHome from '@/src/components/RecentTradesHome';
 import { prisma } from '@/src/lib/prisma';
 import Link from 'next/link';
 import Image from 'next/image';
+import { unstable_cache } from 'next/cache';
 
 // Performance monitoring functions
 async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>): Promise<T> {
@@ -22,104 +23,114 @@ async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>):
   return result;
 }
 
-// OPTIMIZED: Get featured politicians using SQL aggregation instead of loading all transactions
-const getFeaturedPoliticiansOptimized = async () => {
-  return measureTimeAsync('Featured Politicians SQL Query', async () => {
-    const result = await prisma.$queryRaw<Array<{
-      member_id: number;
-      name: string;
-      photo_url: string | null;
-      party: string | null;
-      state: string | null;
-      chamber: string | null;
-      trade_count: bigint;
-      total_volume: number;
-    }>>`
-      SELECT 
-        m.member_id,
-        m.name,
-        m.photo_url,
-        m.party,
-        m.state,
-        m.chamber,
-        COUNT(t.transaction_id) as trade_count,
-        COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM "Members" m
-      LEFT JOIN "Filings" f ON m.member_id = f.member_id
-      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
-      GROUP BY m.member_id, m.name, m.photo_url, m.party, m.state, m.chamber
-      HAVING COUNT(t.transaction_id) > 0
-      ORDER BY trade_count DESC
-      LIMIT 5
-    `;
+// OPTIMIZED: Get featured politicians with caching and efficient joins
+const getFeaturedPoliticiansOptimized = unstable_cache(
+  async () => {
+    return measureTimeAsync('Featured Politicians SQL Query', async () => {
+      const result = await prisma.$queryRaw<Array<{
+        member_id: number;
+        name: string;
+        photo_url: string | null;
+        party: string | null;
+        state: string | null;
+        chamber: string | null;
+        trade_count: bigint;
+        total_volume: number;
+      }>>`
+        SELECT 
+          m.member_id,
+          m.name,
+          m.photo_url,
+          m.party,
+          m.state,
+          m.chamber,
+          COUNT(t.transaction_id) as trade_count,
+          COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
+        FROM "Members" m
+        JOIN "Filings" f ON m.member_id = f.member_id
+        JOIN "Transactions" t ON f.filing_id = t.filing_id
+        GROUP BY m.member_id, m.name, m.photo_url, m.party, m.state, m.chamber
+        ORDER BY trade_count DESC
+        LIMIT 5
+      `;
 
-    return result.map(row => ({
-      member_id: row.member_id,
-      name: row.name,
-      photo_url: row.photo_url,
-      party: row.party,
-      state: row.state,
-      chamber: row.chamber,
-      tradeCount: Number(row.trade_count),
-      totalVolume: row.total_volume
-    }));
-  });
-};
+      return result.map(row => ({
+        member_id: row.member_id,
+        name: row.name,
+        photo_url: row.photo_url,
+        party: row.party,
+        state: row.state,
+        chamber: row.chamber,
+        tradeCount: Number(row.trade_count),
+        totalVolume: row.total_volume
+      }));
+    });
+  },
+  ['home:featured-politicians:v1'],
+  { revalidate: 300 }
+);
 
-// OPTIMIZED: Get top stocks using SQL aggregation instead of loading all transactions
-const getTopStocksOptimized = async () => {
-  return measureTimeAsync('Top Stocks SQL Query', async () => {
-    const result = await prisma.$queryRaw<Array<{
-      asset_id: number;
-      ticker: string;
-      company_name: string;
-      trade_count: bigint;
-      total_volume: number;
-    }>>`
-      SELECT 
-        a.asset_id,
-        a.ticker,
-        a.company_name,
-        COUNT(t.transaction_id) as trade_count,
-        COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM "Assets" a
-      LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id
-      WHERE a.ticker IS NOT NULL
-      GROUP BY a.asset_id, a.ticker, a.company_name
-      HAVING COUNT(t.transaction_id) > 0
-      ORDER BY trade_count DESC
-      LIMIT 5
-    `;
+// OPTIMIZED: Get top stocks with caching and efficient joins
+const getTopStocksOptimized = unstable_cache(
+  async () => {
+    return measureTimeAsync('Top Stocks SQL Query', async () => {
+      const result = await prisma.$queryRaw<Array<{
+        asset_id: number;
+        ticker: string;
+        company_name: string;
+        trade_count: bigint;
+        total_volume: number;
+      }>>`
+        SELECT 
+          a.asset_id,
+          a.ticker,
+          a.company_name,
+          COUNT(t.transaction_id) as trade_count,
+          COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
+        FROM "Assets" a
+        JOIN "Transactions" t ON a.asset_id = t.asset_id
+        WHERE a.ticker IS NOT NULL
+        GROUP BY a.asset_id, a.ticker, a.company_name
+        ORDER BY trade_count DESC
+        LIMIT 5
+      `;
 
-    return result.map(row => ({
-      asset_id: row.asset_id,
-      ticker: row.ticker || 'N/A',
-      company_name: row.company_name,
-      tradeCount: Number(row.trade_count),
-      totalVolume: row.total_volume
-    }));
-  });
-};
+      return result.map(row => ({
+        asset_id: row.asset_id,
+        ticker: row.ticker || 'N/A',
+        company_name: row.company_name,
+        tradeCount: Number(row.trade_count),
+        totalVolume: row.total_volume
+      }));
+    });
+  },
+  ['home:top-stocks:v1'],
+  { revalidate: 300 }
+);
 
-// OPTIMIZED: Get platform statistics using SQL aggregation
-const getPlatformStatsOptimized = async () => {
-  return measureTimeAsync('Platform Statistics SQL Queries', async () => {
-    const [totalTradesResult, totalMembersResult, totalVolumeResult] = await Promise.all([
-      prisma.transactions.count(),
-      prisma.members.count(),
-      prisma.$queryRaw<Array<{ total_volume: number }>>`
-        SELECT COALESCE(SUM((amount_range_low + amount_range_high) / 2.0), 0) as total_volume
-        FROM "Transactions"
-      `
-    ]);
+// OPTIMIZED: Get platform statistics with caching
+const getPlatformStatsOptimized = unstable_cache(
+  async () => {
+    return measureTimeAsync('Platform Statistics SQL Queries', async () => {
+      const [totalTradesResult, totalMembersResult, totalVolumeResult] = await Promise.all([
+        prisma.transactions.count(),
+        prisma.members.count(),
+        prisma.$queryRaw<Array<{ total_volume: number }>>`
+          SELECT COALESCE(SUM((amount_range_low + amount_range_high) / 2.0), 0) as total_volume
+          FROM "Transactions"
+        `
+      ]);
 
-    return {
-      totalTrades: totalTradesResult,
-      totalMembers: totalMembersResult,
-      totalVolume: Number(totalVolumeResult[0]?.total_volume || 0)
-    };
-  });
-};
+      return {
+        totalTrades: totalTradesResult,
+        totalMembers: totalMembersResult,
+        totalVolume: Number(totalVolumeResult[0]?.total_volume || 0)
+      };
+    });
+  },
+  ['home:platform-stats:v1'],
+  { revalidate: 60 }
+);
 
 export default async function Home() {
   const pageStart = performance.now();
@@ -346,7 +357,7 @@ export default async function Home() {
                   {topStocks.slice(0, 5).map((stock) => (
                     <Link
                       key={stock.ticker}
-                      href={`/stocks/${(stock as any).asset_id}`}
+                      href={`/stocks/${stock.asset_id}`}
                       className="block bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors"
                       style={{ height: '76px' }}
                     >
@@ -402,6 +413,8 @@ export default async function Home() {
                 type="email"
                 placeholder="Enter your email"
                 className="flex-1 px-4 py-3 rounded-lg"
+                id="newsletter-email"
+                name="email"
               />
               <button className="button-primary">
                 Subscribe
