@@ -221,7 +221,7 @@ export default function SearchSection() {
                         placeholder="Enter politician name (2+ chars)..."
                         value={politicianSearchDisplay}
                         onChange={handlePoliticianInputChange}
-                        className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                        className="search-input w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-blue-400"
                       />
                       {loadingPoliticians && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -304,7 +304,7 @@ export default function SearchSection() {
                         placeholder="Enter stock ticker or company (2+ chars)..."
                         value={stockSearchDisplay}
                         onChange={handleStockInputChange}
-                        className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-green-400"
+                        className="search-input w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-green-400"
                       />
                       {loadingStocks && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">

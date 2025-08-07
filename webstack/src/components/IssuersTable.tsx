@@ -358,7 +358,7 @@ export default function IssuersTable({ issuers }: Props) {
                 placeholder="Search ALL companies or tickers (2+ chars)..."
                 value={issuerSearchDisplay}
                 onChange={handleIssuerSearchChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-700 focus:outline-none focus:border-blue-400"
+                className="search-input w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-700 focus:outline-none focus:border-blue-400"
               />
               {isSearching && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
