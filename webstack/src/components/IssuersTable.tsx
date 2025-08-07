@@ -129,7 +129,6 @@ export default function IssuersTable({ issuers }: Props) {
 
   // Use enhanced debounced inputs - NO expensive operations on keystroke
   const [issuerSearchDisplay, issuerSearchDebounced, setIssuerSearch] = useDebouncedInput(300);
-  const [politicianSearchDisplay, politicianSearchDebounced, setPoliticianSearch] = useDebouncedInput(150);
   const [sectorFilter, setSectorFilter] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('volume');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -218,20 +217,18 @@ export default function IssuersTable({ issuers }: Props) {
   const filterIssuers = useCallback((
     issuers: OptimizedIssuer[], 
     issuerSearch: string, 
-    politicianSearch: string, 
     sectorFilter: string
   ) => {
     // Only apply text filters if they have at least 2 characters
     const hasValidIssuerSearch = issuerSearch.trim().length >= 2;
-    const hasValidPoliticianSearch = politicianSearch.trim().length >= 2;
     
     // If no valid filters, return original array (avoid unnecessary work)
-    if (!hasValidIssuerSearch && !hasValidPoliticianSearch && !sectorFilter) {
+    if (!hasValidIssuerSearch && !sectorFilter) {
       return issuers;
     }
 
     const lowerIssuerSearch = issuerSearch.toLowerCase();
-    const lowerPoliticianSearch = politicianSearch.toLowerCase();
+    
     
     return issuers.filter(issuer => {
       // Sector filter first (fastest check)
@@ -240,8 +237,7 @@ export default function IssuersTable({ issuers }: Props) {
       // Issuer search (only if 2+ characters)
       if (hasValidIssuerSearch && !issuer.searchString.includes(lowerIssuerSearch)) return false;
       
-      // Politician search (only if 2+ characters)
-      if (hasValidPoliticianSearch && !issuer.searchString.includes(lowerPoliticianSearch)) return false;
+      // Politician search removed
       
       return true;
     });
@@ -292,7 +288,6 @@ export default function IssuersTable({ issuers }: Props) {
     const filtered = filterIssuers(
       optimizedIssuers, 
       issuerSearchDebounced, 
-      politicianSearchDebounced, 
       sectorFilter
     );
     
@@ -319,9 +314,7 @@ export default function IssuersTable({ issuers }: Props) {
     setIssuerSearch(e.target.value); // This only updates display value immediately
   }, [setIssuerSearch]);
 
-  const handlePoliticianSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPoliticianSearch(e.target.value); // This only updates display value immediately
-  }, [setPoliticianSearch]);
+  // Politician search removed
 
   const handleSectorFilterChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setSectorFilter(e.target.value);
@@ -365,7 +358,7 @@ export default function IssuersTable({ issuers }: Props) {
                 placeholder="Search ALL companies or tickers (2+ chars)..."
                 value={issuerSearchDisplay}
                 onChange={handleIssuerSearchChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-700 focus:outline-none focus:border-blue-400"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-700 focus:outline-none focus:border-blue-400"
               />
               {isSearching && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -375,19 +368,7 @@ export default function IssuersTable({ issuers }: Props) {
             </div>
           </div>
 
-          {/* Politician Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Find by politician
-            </label>
-            <input
-              type="text"
-              placeholder="Search by politician (2+ chars)..."
-              value={politicianSearchDisplay}
-              onChange={handlePoliticianSearchChange}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-700 focus:outline-none focus:border-blue-400"
-            />
-          </div>
+          {/* Politician Search removed */}
 
           {/* Sector Filter */}
           <div>
@@ -420,14 +401,14 @@ export default function IssuersTable({ issuers }: Props) {
                 ) : (
                   <>
                     Showing {filteredIssuers.length} of {searchResults.length} search results for "{issuerSearchDebounced}"
-                    {politicianSearchDebounced.trim().length >= 2 || sectorFilter ? ' (filtered)' : ''}
+                    {sectorFilter ? ' (filtered)' : ''}
                   </>
                 )}
               </>
             ) : (
               <>
                 Showing {filteredIssuers.length} of {issuers.length} top issuers
-                {politicianSearchDebounced.trim().length >= 2 || sectorFilter ? ' (filtered)' : ''}
+                {sectorFilter ? ' (filtered)' : ''}
               </>
             )}
           </div>
