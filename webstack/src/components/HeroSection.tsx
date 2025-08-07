@@ -36,7 +36,7 @@ export default function HeroSection({ lastUpdateDate }: { lastUpdateDate: Date |
         <div className="mb-6">
           <span
             className="inline-block px-4 py-2 rounded-full font-semibold"
-            style={{ background: 'var(--c-jade-100)', color: 'var(--c-navy)' }}
+            style={{ background: 'var(--c-jade-100)', color: 'var(--c-navy)', minWidth: 180, display: 'inline-block', textAlign: 'center' }}
             suppressHydrationWarning
           >
             Last updated: {lastUpdate || '...'}

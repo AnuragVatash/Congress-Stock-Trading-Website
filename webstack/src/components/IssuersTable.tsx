@@ -428,10 +428,10 @@ export default function IssuersTable({ issuers }: Props) {
       <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" style={{ background: 'var(--c-navy-50)', color: 'var(--c-navy)' }}>
-            <thead className="bg-gray-700">
+            <thead className="bg-gray-800">
               <tr className="text-left">
                 <th 
-                  className="px-6 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-4 text-sm font-medium text-gray-200 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort('issuer')}
                 >
                   <div className="flex items-center gap-2">
@@ -440,7 +440,7 @@ export default function IssuersTable({ issuers }: Props) {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-4 text-sm font-medium text-gray-200 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort('lastTraded')}
                 >
                   <div className="flex items-center gap-2">
@@ -449,7 +449,7 @@ export default function IssuersTable({ issuers }: Props) {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-4 text-sm font-medium text-gray-200 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort('volume')}
                 >
                   <div className="flex items-center gap-2">
@@ -458,7 +458,7 @@ export default function IssuersTable({ issuers }: Props) {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-4 text-sm font-medium text-gray-200 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort('trades')}
                 >
                   <div className="flex items-center gap-2">
@@ -467,7 +467,7 @@ export default function IssuersTable({ issuers }: Props) {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-4 text-sm font-medium text-gray-200 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort('politicians')}
                 >
                   <div className="flex items-center gap-2">
@@ -475,10 +475,10 @@ export default function IssuersTable({ issuers }: Props) {
                     {getSortIcon('politicians')}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-sm font-medium text-gray-300">SECTOR</th>
-                <th className="px-6 py-4 text-sm font-medium text-gray-300">LAST 30 DAYS</th>
+                <th className="px-6 py-4 text-sm font-medium text-gray-200">SECTOR</th>
+                <th className="px-6 py-4 text-sm font-medium text-gray-200">LAST 30 DAYS</th>
                 <th 
-                  className="px-6 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-4 text-sm font-medium text-gray-200 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort('price')}
                 >
                   <div className="flex items-center gap-2">

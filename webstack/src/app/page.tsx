@@ -357,7 +357,7 @@ export default async function Home() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <h3 className="text-white font-semibold text-sm truncate">{stock.company_name}</h3>
-                            <p className="text-xs text-gray-400">{stock.tradeCount} trades</p>
+                            <p className="text-xs text-gray-200">{stock.tradeCount} trades</p>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0 ml-2">
