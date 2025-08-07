@@ -8,9 +8,10 @@ import SearchSection from '@/src/components/SearchSection';
 import StatsGrid from '@/src/components/StatsGrid';
 import RecentTradesHome from '@/src/components/RecentTradesHome';
 import { prisma } from '@/src/lib/prisma';
-import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import Image from 'next/image';
+import TickerBar from '@/src/components/TickerBar';
+import { unstable_cache } from 'next/cache';
 
 // Performance monitoring functions
 async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>): Promise<T> {
@@ -23,101 +24,114 @@ async function measureTimeAsync<T>(operationName: string, fn: () => Promise<T>):
   return result;
 }
 
-// OPTIMIZED: Get featured politicians using SQL aggregation instead of loading all transactions
-const getFeaturedPoliticiansOptimized = async () => {
-  return measureTimeAsync('Featured Politicians SQL Query', async () => {
-    const result = await prisma.$queryRaw<Array<{
-      member_id: number;
-      name: string;
-      photo_url: string | null;
-      party: string | null;
-      state: string | null;
-      chamber: string | null;
-      trade_count: bigint;
-      total_volume: number;
-    }>>`
-      SELECT 
-        m.member_id,
-        m.name,
-        m.photo_url,
-        m.party,
-        m.state,
-        m.chamber,
-        COUNT(t.transaction_id) as trade_count,
-        COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM "Members" m
-      LEFT JOIN "Filings" f ON m.member_id = f.member_id
-      LEFT JOIN "Transactions" t ON f.filing_id = t.filing_id
-      GROUP BY m.member_id, m.name, m.photo_url, m.party, m.state, m.chamber
-      HAVING COUNT(t.transaction_id) > 0
-      ORDER BY trade_count DESC
-      LIMIT 5
-    `;
+// OPTIMIZED: Get featured politicians with caching and efficient joins
+const getFeaturedPoliticiansOptimized = unstable_cache(
+  async () => {
+    return measureTimeAsync('Featured Politicians SQL Query', async () => {
+      const result = await prisma.$queryRaw<Array<{
+        member_id: number;
+        name: string;
+        photo_url: string | null;
+        party: string | null;
+        state: string | null;
+        chamber: string | null;
+        trade_count: bigint;
+        total_volume: number;
+      }>>`
+        SELECT 
+          m.member_id,
+          m.name,
+          m.photo_url,
+          m.party,
+          m.state,
+          m.chamber,
+          COUNT(t.transaction_id) as trade_count,
+          COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
+        FROM "Members" m
+        JOIN "Filings" f ON m.member_id = f.member_id
+        JOIN "Transactions" t ON f.filing_id = t.filing_id
+        GROUP BY m.member_id, m.name, m.photo_url, m.party, m.state, m.chamber
+        ORDER BY trade_count DESC
+        LIMIT 5
+      `;
 
-    return result.map(row => ({
-      member_id: row.member_id,
-      name: row.name,
-      photo_url: row.photo_url,
-      party: row.party,
-      state: row.state,
-      chamber: row.chamber,
-      tradeCount: Number(row.trade_count),
-      totalVolume: row.total_volume
-    }));
-  });
-};
+      return result.map(row => ({
+        member_id: row.member_id,
+        name: row.name,
+        photo_url: row.photo_url,
+        party: row.party,
+        state: row.state,
+        chamber: row.chamber,
+        tradeCount: Number(row.trade_count),
+        totalVolume: row.total_volume
+      }));
+    });
+  },
+  ['home:featured-politicians:v1'],
+  { revalidate: 300 }
+);
 
-// OPTIMIZED: Get top stocks using SQL aggregation instead of loading all transactions
-const getTopStocksOptimized = async () => {
-  return measureTimeAsync('Top Stocks SQL Query', async () => {
-    const result = await prisma.$queryRaw<Array<{
-      ticker: string;
-      company_name: string;
-      trade_count: bigint;
-      total_volume: number;
-    }>>`
-      SELECT 
-        a.ticker,
-        a.company_name,
-        COUNT(t.transaction_id) as trade_count,
-        COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
-      FROM "Assets" a
-      LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id
-      WHERE a.ticker IS NOT NULL
-      GROUP BY a.asset_id, a.ticker, a.company_name
-      HAVING COUNT(t.transaction_id) > 0
-      ORDER BY trade_count DESC
-      LIMIT 5
-    `;
+// OPTIMIZED: Get top stocks with caching and efficient joins
+const getTopStocksOptimized = unstable_cache(
+  async () => {
+    return measureTimeAsync('Top Stocks SQL Query', async () => {
+      const result = await prisma.$queryRaw<Array<{
+        asset_id: number;
+        ticker: string;
+        company_name: string;
+        trade_count: bigint;
+        total_volume: number;
+      }>>`
+        SELECT 
+          a.asset_id,
+          a.ticker,
+          a.company_name,
+          COUNT(t.transaction_id) as trade_count,
+          COALESCE(SUM((t.amount_range_low + t.amount_range_high) / 2.0), 0) as total_volume
+        FROM "Assets" a
+        JOIN "Transactions" t ON a.asset_id = t.asset_id
+        WHERE a.ticker IS NOT NULL
+        GROUP BY a.asset_id, a.ticker, a.company_name
+        ORDER BY trade_count DESC
+        LIMIT 5
+      `;
 
-    return result.map(row => ({
-      ticker: row.ticker || 'N/A',
-      company_name: row.company_name,
-      tradeCount: Number(row.trade_count),
-      totalVolume: row.total_volume
-    }));
-  });
-};
+      return result.map(row => ({
+        asset_id: row.asset_id,
+        ticker: row.ticker || 'N/A',
+        company_name: row.company_name,
+        tradeCount: Number(row.trade_count),
+        totalVolume: row.total_volume
+      }));
+    });
+  },
+  ['home:top-stocks:v1'],
+  { revalidate: 300 }
+);
 
-// OPTIMIZED: Get platform statistics using SQL aggregation
-const getPlatformStatsOptimized = async () => {
-  return measureTimeAsync('Platform Statistics SQL Queries', async () => {
-    const [totalTradesResult, totalMembersResult, totalVolumeResult] = await Promise.all([
-      prisma.transactions.count(),
-      prisma.members.count(),
-      prisma.$queryRaw<Array<{ total_volume: number }>>`
-        SELECT COALESCE(SUM((amount_range_low + amount_range_high) / 2.0), 0) as total_volume
-        FROM "Transactions"
-      `
-    ]);
+// OPTIMIZED: Get platform statistics with caching
+const getPlatformStatsOptimized = unstable_cache(
+  async () => {
+    return measureTimeAsync('Platform Statistics SQL Queries', async () => {
+      const [totalTradesResult, totalMembersResult, totalVolumeResult] = await Promise.all([
+        prisma.transactions.count(),
+        prisma.members.count(),
+        prisma.$queryRaw<Array<{ total_volume: number }>>`
+          SELECT COALESCE(SUM((amount_range_low + amount_range_high) / 2.0), 0) as total_volume
+          FROM "Transactions"
+        `
+      ]);
 
-    return {
-      totalTrades: totalTradesResult,
-      totalMembers: totalMembersResult,
-      totalVolume: Number(totalVolumeResult[0]?.total_volume || 0)
-    };
-  });
-};
+      return {
+        totalTrades: totalTradesResult,
+        totalMembers: totalMembersResult,
+        totalVolume: Number(totalVolumeResult[0]?.total_volume || 0)
+      };
+    });
+  },
+  ['home:platform-stats:v1'],
+  { revalidate: 60 }
+);
 
 export default async function Home() {
   const pageStart = performance.now();
@@ -158,11 +172,6 @@ export default async function Home() {
     )
   ]);
 
-  // Format the last update time
-  const lastUpdate = latestApiRequest?.created_at 
-    ? formatDistanceToNow(new Date(latestApiRequest.created_at), { addSuffix: true })
-    : 'Unknown';
-
   const pageEnd = performance.now();
   console.log(`🚀 HOME: TOTAL PAGE TIME: ${(pageEnd - pageStart).toFixed(2)}ms`);
 
@@ -197,11 +206,16 @@ export default async function Home() {
     return `${value}`;
   }
 
-  // Helper to format date
+  // Helper to format date with deterministic locale and timezone to avoid hydration mismatches
   function formatDate(date: Date | string | null) {
     if (!date) return '';
     const d = date instanceof Date ? date : new Date(date);
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    try {
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+    } catch {
+      // Fallback: ISO slice
+      return d.toISOString().slice(0, 10);
+    }
   }
 
   // Use the topTransactions for the ticker
@@ -220,57 +234,15 @@ export default async function Home() {
     <div className="min-h-screen" style={{ background: 'linear-gradient(120deg, var(--c-navy-50) 0%, var(--c-gray-50) 100%)', color: 'var(--c-navy)' }}>
       {/* Top Ticker Bar Only */}
       <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', background: 'linear-gradient(90deg, var(--c-navy), var(--c-navy-600))', color: '#fff', minHeight: '56px', display: 'flex', alignItems: 'center', overflow: 'hidden', zIndex: 100 }}>
-        {/* Ticker */}
-        <div style={{ width: '100%', overflow: 'hidden', height: '56px', display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'stretch',
-              whiteSpace: 'nowrap',
-              animation: 'ticker-scroll-ltr 93s linear infinite',
-              fontSize: '1rem',
-              gap: '0',
-            }}
-          >
-            {tickerTrades.concat(tickerTrades).map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minWidth: '180px',
-                  padding: '0 1.25rem',
-                  marginRight: 0,
-                  fontWeight: 500,
-                  color: item.type === 'Purchase' ? '#4AC088' : '#E74C3C',
-                  borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.18)',
-                }}
-              >
-                <span>{item.member} {item.ticker} {item.amount} {item.type}</span>
-                <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.7)', marginTop: 2, textAlign: 'center', fontWeight: 400 }}>
-                  {item.date}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Ticker CSS */}
-        <style>{`
-          @keyframes ticker-scroll-ltr {
-            0% { transform: translateX(-50%); }
-            100% { transform: translateX(0); }
-          }
-          body { margin-top: 56px !important; }
-        `}</style>
+        <TickerBar items={tickerTrades} />
+        <style>{`body { margin-top: 56px !important; }`}</style>
       </div>
       {/* Hero Section with Sidebars */}
       <div className="relative py-4 px-4">
         <div style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16, background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderRadius: '0.75rem', border: '1px solid #fff' }}>
           <div className="grid lg:grid-cols-12 gap-6">
             {/* Left Sidebar - Featured Members */}
-            <div className="lg:col-span-3 hidden lg:block">
+            <div className="lg:col-span-3 order-2 lg:order-1">
               <div 
                 className="rounded-lg p-6 border h-full"
                 style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderColor: 'var(--c-navy-600)' }}
@@ -324,12 +296,12 @@ export default async function Home() {
             </div>
 
             {/* Center - Hero Section */}
-            <div className="lg:col-span-6">
-              <HeroSection lastUpdate={lastUpdate} />
+            <div className="lg:col-span-6 order-1 lg:order-2">
+              <HeroSection lastUpdateDate={latestApiRequest?.created_at} />
             </div>
 
             {/* Right Sidebar - Top Traded Stocks */}
-            <div className="lg:col-span-3 hidden lg:block">
+            <div className="lg:col-span-3 order-3 lg:order-3">
               <div 
                 className="rounded-lg p-6 border h-full"
                 style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))', borderColor: 'var(--c-navy-600)' }}
@@ -342,9 +314,10 @@ export default async function Home() {
                 </div>
                 <div className="space-y-2 overflow-hidden" style={{ height: '408px' }}>
                   {topStocks.slice(0, 5).map((stock) => (
-                    <div
+                    <Link
                       key={stock.ticker}
-                      className="block bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors cursor-pointer"
+                      href={`/stocks/${stock.asset_id}`}
+                      className="block bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors"
                       style={{ height: '76px' }}
                     >
                       <div className="flex items-center justify-between h-full">
@@ -354,14 +327,14 @@ export default async function Home() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <h3 className="text-white font-semibold text-sm truncate">{stock.company_name}</h3>
-                            <p className="text-xs text-gray-400">{stock.tradeCount} trades</p>
+                            <p className="text-xs text-gray-200">{stock.tradeCount} trades</p>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0 ml-2">
                           <div className="text-white font-semibold text-sm">${((stock.totalVolume / 1000000) | 0)}M</div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -399,6 +372,8 @@ export default async function Home() {
                 type="email"
                 placeholder="Enter your email"
                 className="flex-1 px-4 py-3 rounded-lg"
+                id="newsletter-email"
+                name="email"
               />
               <button className="button-primary">
                 Subscribe

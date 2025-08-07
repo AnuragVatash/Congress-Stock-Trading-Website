@@ -75,11 +75,10 @@ export async function GET(request: Request) {
         COUNT(DISTINCT f.member_id) as politician_count,
         MAX(t.transaction_date) as last_traded
       FROM "Assets" a
-      LEFT JOIN "Transactions" t ON a.asset_id = t.asset_id
-      LEFT JOIN "Filings" f ON t.filing_id = f.filing_id
+      JOIN "Transactions" t ON a.asset_id = t.asset_id
+      JOIN "Filings" f ON t.filing_id = f.filing_id
       WHERE (a.ticker ILIKE '%' || ${query} || '%' OR a.company_name ILIKE '%' || ${query} || '%')
       GROUP BY a.asset_id, a.company_name, a.ticker
-      HAVING COUNT(t.transaction_id) > 0
       ORDER BY 
         CASE 
           WHEN a.ticker LIKE ${query} || '%' THEN 1

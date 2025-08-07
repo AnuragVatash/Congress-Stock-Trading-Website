@@ -18,7 +18,8 @@ export async function GET(request: Request) {
     const politicians = await prisma.members.findMany({
       where: {
         name: {
-          contains: query
+          contains: query,
+          mode: 'insensitive'
         }
       },
       include: {

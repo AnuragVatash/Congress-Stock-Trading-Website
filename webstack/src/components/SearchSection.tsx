@@ -100,8 +100,13 @@ export default function SearchSection() {
         const response = await fetch(`/api/search/politicians?q=${encodeURIComponent(politicianSearchDebounced)}&limit=5`);
         if (response.ok) {
           const results = await response.json();
-          setPoliticianResults(results);
-          setShowPoliticianDropdown(true);
+          if (Array.isArray(results)) {
+            setPoliticianResults(results);
+            setShowPoliticianDropdown(true);
+          } else {
+            setPoliticianResults([]);
+            setShowPoliticianDropdown(false);
+          }
         }
       } catch (error) {
         console.error('Error searching politicians:', error);
@@ -188,7 +193,7 @@ export default function SearchSection() {
   }, [setStockSearch]);
 
   return (
-    <div style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16 }}>
+    <div id="search" style={{ width: '1500px', maxWidth: '100%', margin: '0 auto', padding: 16, scrollMarginTop: 72 }}>
       <section 
         className="rounded-lg card" 
         style={{ background: 'linear-gradient(5deg, var(--c-navy), var(--c-navy-600))' }}
@@ -221,7 +226,9 @@ export default function SearchSection() {
                         placeholder="Enter politician name (2+ chars)..."
                         value={politicianSearchDisplay}
                         onChange={handlePoliticianInputChange}
-                        className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                        className="search-input w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                        id="politician-search"
+                        name="politician"
                       />
                       {loadingPoliticians && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -239,7 +246,7 @@ export default function SearchSection() {
                   
                   {/* Politician Dropdown */}
                   {showPoliticianDropdown && politicianResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                       {politicianResults.map((politician) => (
                         <button
                           key={politician.member_id}
@@ -304,7 +311,9 @@ export default function SearchSection() {
                         placeholder="Enter stock ticker or company (2+ chars)..."
                         value={stockSearchDisplay}
                         onChange={handleStockInputChange}
-                        className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-400"
+                        className="search-input w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-green-400"
+                        id="stock-search"
+                        name="stock"
                       />
                       {loadingStocks && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -322,7 +331,7 @@ export default function SearchSection() {
                   
                   {/* Stock Dropdown */}
                   {showStockDropdown && stockResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-14 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                       {stockResults.map((stock) => (
                         <button
                           key={stock.asset_id}
