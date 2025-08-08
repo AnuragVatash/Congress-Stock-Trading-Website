@@ -36,3 +36,6 @@ pytest-cov>=4.0.0
 
 # Type hints
 typing-extensions>=4.0.0 
+
+# Market data service
+yfinance>=0.2.54

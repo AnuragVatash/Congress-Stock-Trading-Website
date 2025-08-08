@@ -6,6 +6,8 @@ export const revalidate = 0;
 import { prisma } from '@/src/lib/prisma';
 import Link from 'next/link';
 import IssuersTable from '@/src/components/IssuersTable';
+import { getPriceDataForDateRange } from '@/src/lib/priceDataService';
+import type { PriceDataPoint } from '@/src/lib/priceDataService';
 import Image from 'next/image';
 
 // Performance monitoring functions
@@ -57,18 +59,14 @@ function inferSector(companyName: string): string {
   return 'Other';
 }
 
-// Mock function to generate 30-day price data
-function generatePriceData(basePrice: number): number[] {
-  const data = [];
-  let currentPrice = basePrice;
-  
-  for (let i = 0; i < 30; i++) {
-    const change = (Math.random() - 0.5) * 0.1; // ±5% daily change
-    currentPrice = Math.max(1, currentPrice * (1 + change));
-    data.push(currentPrice);
-  }
-  
-  return data;
+async function getReal30DayPrices(ticker: string | null): Promise<number[]> {
+  if (!ticker) return [];
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 30);
+  const series: PriceDataPoint[] = await getPriceDataForDateRange(ticker.toUpperCase(), start, end);
+  if (!series || series.length === 0) return [];
+  return series.map((p: PriceDataPoint) => (typeof p.close === 'number' ? p.close : p.price));
 }
 
 async function getTradesData(page: number = 1, pageSize: number = 50) {
@@ -103,30 +101,32 @@ async function getTradesData(page: number = 1, pageSize: number = 50) {
     `;
   });
 
-  // Process data for each issuer
-  const issuersData: IssuerData[] = aggregatedAssets
-    .map(asset => {
-      // Mock price data
-      const basePrice = Math.random() * 200 + 50; // $50-$250
-      const priceData = generatePriceData(basePrice);
-      const currentPrice = priceData[priceData.length - 1];
-      const previousPrice = priceData[priceData.length - 2];
-      const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
+  // Process data for each issuer with real 30-day prices
+  const baseIssuers = aggregatedAssets.map(asset => ({
+    asset_id: asset.asset_id,
+    company_name: asset.company_name,
+    ticker: asset.ticker,
+    lastTraded: asset.last_traded ? new Date(asset.last_traded) : null,
+    totalVolume: Number(asset.total_volume),
+    tradeCount: Number(asset.trade_count),
+    politicianCount: Number(asset.politician_count),
+    sector: inferSector(asset.company_name)
+  }));
 
+  const issuersData: IssuerData[] = await Promise.all(
+    baseIssuers.map(async (item) => {
+      const priceData = await getReal30DayPrices(item.ticker);
+      const currentPrice = priceData.length > 0 ? priceData[priceData.length - 1] : 0;
+      const previousPrice = priceData.length > 1 ? priceData[priceData.length - 2] : currentPrice || 1;
+      const priceChange = priceData.length > 1 ? ((currentPrice - previousPrice) / previousPrice) * 100 : 0;
       return {
-        asset_id: asset.asset_id,
-        company_name: asset.company_name,
-        ticker: asset.ticker,
-        lastTraded: asset.last_traded ? new Date(asset.last_traded) : null,
-        totalVolume: Number(asset.total_volume),
-        tradeCount: Number(asset.trade_count),
-        politicianCount: Number(asset.politician_count),
-        sector: inferSector(asset.company_name),
+        ...item,
         currentPrice,
         priceChange,
         priceData
-      };
-    });
+      } as IssuerData;
+    })
+  );
 
   return issuersData;
 }

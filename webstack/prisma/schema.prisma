@@ -38,6 +38,7 @@ model Assets {
   company_clean String?
   created_at   DateTime?      @default(now())
   Transactions Transactions[]
+  StockPrices  StockPrices[]
 
   @@unique([company_name, ticker], map: "sqlite_autoindex_Assets_1")
   @@index([ticker])
@@ -119,8 +120,11 @@ model StockPrices {
   dividend    Float?    @default(0.0)
   created_at  DateTime? @default(now())
   updated_at  DateTime? @updatedAt
+  asset_id    Int?
+  Assets      Assets?   @relation(fields: [asset_id], references: [asset_id], onDelete: NoAction, onUpdate: Cascade)
 
   @@unique([ticker, date], map: "unique_ticker_date")
   @@index([ticker])
   @@index([date])
+  @@index([asset_id])
 }

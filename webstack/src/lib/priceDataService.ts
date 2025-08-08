@@ -62,6 +62,11 @@ export async function getRealPriceData(
   startDate: Date, 
   endDate: Date
 ): Promise<PriceDataPoint[]> {
+  // Skip DB entirely if disabled or not configured
+  const dbDisabled = (process.env.PRICE_DATA_DISABLE_DB || '').toLowerCase() === 'true' || process.env.PRICE_DATA_DISABLE_DB === '1';
+  if (dbDisabled || !process.env.DATABASE_URL) {
+    return [];
+  }
   try {
     // Using any to bypass the Prisma client type issue until it's regenerated
     const priceRecords = await (prisma as any).stockPrices.findMany({
@@ -88,7 +93,106 @@ export async function getRealPriceData(
     }));
 
   } catch (error) {
-    console.error(`Error fetching price data for ${ticker}:`, error);
+    // Suppress noisy DB errors when the table doesn't exist in this env
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`DB price fetch failed for ${ticker}. Falling back to static JSON.`);
+    }
+    return [];
+  }
+}
+
+async function getPriceDataFromYFinanceService(
+  ticker: string,
+  startDate: Date,
+  endDate: Date
+): Promise<PriceDataPoint[]> {
+  try {
+    const start = startDate.toISOString().slice(0, 10);
+    const end = endDate.toISOString().slice(0, 10);
+
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const url = new URL(`/api/stock-prices/${encodeURIComponent(ticker)}`, baseUrl);
+    url.searchParams.set('start', start);
+    url.searchParams.set('end', end);
+    url.searchParams.set('interval', '1d');
+
+    const res = await fetch(url.toString(), { next: { revalidate: 300 } });
+    if (!res.ok) {
+      console.warn(`YFinance service returned status ${res.status}`);
+      return [];
+    }
+    const json = await res.json();
+    const prices = Array.isArray(json?.prices) ? json.prices : [];
+    return prices.map((p: any) => ({
+      date: new Date(p.date),
+      price: typeof p.adj_close === 'number' && p.adj_close > 0 ? p.adj_close : p.close,
+      volume: Number(p.volume) || 0,
+      open: typeof p.adj_open === 'number' && p.adj_open > 0 ? p.adj_open : p.open,
+      high: typeof p.adj_high === 'number' && p.adj_high > 0 ? p.adj_high : p.high,
+      low: typeof p.adj_low === 'number' && p.adj_low > 0 ? p.adj_low : p.low,
+      close: typeof p.adj_close === 'number' && p.adj_close > 0 ? p.adj_close : p.close,
+    }));
+  } catch (error) {
+    console.error(`Error fetching price data from yfinance service for ${ticker}:`, error);
+    return [];
+  }
+}
+
+async function getPriceDataFromStaticJson(
+  ticker: string,
+  startDate: Date,
+  endDate: Date
+): Promise<PriceDataPoint[]> {
+  try {
+    const upper = ticker.toUpperCase();
+    const explicitBase = process.env.PRICE_DATA_BASE_URL;
+    const bucket = process.env.PRICE_DATA_BUCKET || 'price-data';
+    const supabaseUrl = process.env.PRICE_DATA_SUPABASE_URL || process.env.PRICE_DATA_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+    let finalUrl: string;
+    if (explicitBase && explicitBase.length > 0) {
+      const base = explicitBase.replace(/\/$/, '');
+      finalUrl = `${base}/${encodeURIComponent(upper)}.json`;
+    } else if (supabaseUrl && supabaseUrl.length > 0) {
+      const sb = supabaseUrl.replace(/\/$/, '');
+      finalUrl = `${sb}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURIComponent(upper)}.json`;
+    } else {
+      const site = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      finalUrl = new URL(`/price-data/${encodeURIComponent(upper)}.json`, site).toString();
+    }
+
+    let res = await fetch(finalUrl, { next: { revalidate: 3600 } });
+    if (!res.ok && (res.status === 400 || res.status === 404)) {
+      // Retry with ?download in case storage expects it
+      const retryUrl = finalUrl.includes('?') ? `${finalUrl}&download=1` : `${finalUrl}?download=1`;
+      res = await fetch(retryUrl, { next: { revalidate: 3600 } });
+      if (!res.ok) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`Static price JSON fetch failed for ${ticker}:`, res.status, finalUrl);
+        }
+        return [];
+      }
+    }
+    const arr = await res.json();
+    if (!Array.isArray(arr)) return [];
+    const startMs = startDate.getTime();
+    const endMs = endDate.getTime();
+    return arr
+      .map((p: any) => ({
+        date: new Date(p.date),
+        price: typeof p.adj_close === 'number' ? p.adj_close : (p.close as number),
+        volume: Number(p.volume) || 0,
+        open: typeof p.adj_open === 'number' ? p.adj_open : (p.open as number),
+        high: typeof p.adj_high === 'number' ? p.adj_high : (p.high as number),
+        low: typeof p.adj_low === 'number' ? p.adj_low : (p.low as number),
+        close: typeof p.adj_close === 'number' ? p.adj_close : (p.close as number),
+      }))
+      .filter(p => {
+        const t = p.date.getTime();
+        return t >= startMs && t <= endMs;
+      })
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+  } catch {
     return [];
   }
 }
@@ -165,17 +269,16 @@ export async function getPriceDataForDateRange(
   startDate: Date, 
   endDate: Date
 ): Promise<PriceDataPoint[]> {
-  // First try to get real data
+  // Prefer static JSON from public/price-data first
+  const staticData = await getPriceDataFromStaticJson(ticker, startDate, endDate);
+  if (staticData.length > 0) return staticData;
+
+  // Then try DB if available
   const realData = await getRealPriceData(ticker, startDate, endDate);
-  
-  if (realData.length > 0) {
-    console.log(`Using real price data for ${ticker}: ${realData.length} records`);
-    return realData;
-  }
-  
-  // Fallback to mock data if no real data is available
-  console.log(`No real price data found for ${ticker}, using mock data`);
-  return generateMockPriceData(ticker, startDate, endDate);
+  if (realData.length > 0) return realData;
+
+  // No data
+  return [];
 }
 
 export function generateTradeDataPoints(

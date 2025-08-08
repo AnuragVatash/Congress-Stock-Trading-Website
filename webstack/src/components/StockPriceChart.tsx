@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { PriceDataPoint, TradeDataPoint } from '@/src/lib/priceDataService';
 
 type Props = {
@@ -9,17 +10,22 @@ type Props = {
   tradeData: TradeDataPoint[];
   ticker: string;
   height?: number;
+  clickTarget?: 'member' | 'asset';
+  assetId?: number;
 };
 
 export default function StockPriceChart({ 
   priceData, 
   tradeData, 
   ticker,
-  height = 400 
+  height = 400,
+  clickTarget = 'member',
+  assetId
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -28,6 +34,12 @@ export default function StockPriceChart({
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Resolve CSS custom properties to actual colors (canvas can't interpret var(...))
+    const styles = getComputedStyle(document.documentElement);
+    const colorJade = (styles.getPropertyValue('--c-jade') || '#10b981').trim();
+    const colorError = (styles.getPropertyValue('--c-error') || '#ef4444').trim();
+    const colorNavyText = (styles.getPropertyValue('--c-navy') || '#0f172a').trim();
 
     // Set canvas size
     const rect = container.getBoundingClientRect();
@@ -80,26 +92,25 @@ export default function StockPriceChart({
       ctx.stroke();
     }
 
-    // Draw price line
-    ctx.strokeStyle = 'var(--c-jade)';
+    // Draw price line as continuous path (avoid visual gaps under pins)
+    ctx.strokeStyle = colorJade;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    
-    priceData.forEach((point, index) => {
-      const x = xScale(point.date.getTime());
-      const y = yScale(point.price);
-      
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    
+    for (let i = 0; i < priceData.length; i++) {
+      const x = xScale(priceData[i].date.getTime());
+      const y = yScale(priceData[i].price);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
     ctx.stroke();
 
+    // Restrict pins to visible date range
+    const visibleTrades = tradeData.filter(trade => {
+      const t = trade.date.getTime();
+      return t >= minDate && t <= maxDate;
+    });
+
     // Draw trade pins
-    tradeData.forEach(trade => {
+    visibleTrades.forEach(trade => {
       const x = xScale(trade.date.getTime());
       const y = yScale(trade.price);
       
@@ -108,7 +119,7 @@ export default function StockPriceChart({
       
       if (trade.type === 'buy') {
         // Buy pin (green, above line, pointing down)
-        ctx.fillStyle = 'var(--c-jade)';
+        ctx.fillStyle = colorJade;
         ctx.beginPath();
         ctx.moveTo(x, y - 15);
         ctx.lineTo(x - pinSize/2, y - 5);
@@ -117,7 +128,7 @@ export default function StockPriceChart({
         ctx.fill();
         
         // Pin stick
-        ctx.strokeStyle = 'var(--c-jade)';
+        ctx.strokeStyle = colorJade;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, y - 5);
@@ -125,7 +136,7 @@ export default function StockPriceChart({
         ctx.stroke();
       } else {
         // Sell pin (red, below line, pointing up)
-        ctx.fillStyle = 'var(--c-error)';
+        ctx.fillStyle = colorError;
         ctx.beginPath();
         ctx.moveTo(x, y + 15);
         ctx.lineTo(x - pinSize/2, y + 5);
@@ -134,7 +145,7 @@ export default function StockPriceChart({
         ctx.fill();
         
         // Pin stick
-        ctx.strokeStyle = 'var(--c-error)';
+        ctx.strokeStyle = colorError;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, y + 5);
@@ -144,7 +155,7 @@ export default function StockPriceChart({
     });
 
     // Draw axes labels
-    ctx.fillStyle = 'var(--c-navy)';
+    ctx.fillStyle = colorNavyText;
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     
@@ -177,26 +188,28 @@ export default function StockPriceChart({
     ctx.textAlign = 'center';
     ctx.fillText(`${ticker} Stock Price with Congressional Trades`, canvas.width / 2, 20);
 
-    // Handle mouse events for tooltips
+    // Helper to find hovered trade near cursor
+    const findHoveredTrade = (x: number, y: number) => {
+      return visibleTrades.find(trade => {
+        const tradeX = xScale(trade.date.getTime());
+        const tradeY = yScale(trade.price);
+        return Math.abs(x - tradeX) < 10 && Math.abs(y - tradeY) < 20;
+      }) || null;
+    };
+
+    // Handle mouse events for tooltips & cursor
     const handleMouseMove = (event: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
-      
-      // Check if mouse is over a trade pin
-      const hoveredTrade = tradeData.find(trade => {
-        const tradeX = xScale(trade.date.getTime());
-        const tradeY = yScale(trade.price);
-        
-        return Math.abs(x - tradeX) < 10 && Math.abs(y - tradeY) < 20;
-      }) || null;
+      const hoveredTrade = findHoveredTrade(x, y);
       
       const tooltip = tooltipRef.current;
       if (tooltip) {
         if (hoveredTrade) {
           tooltip.style.display = 'block';
-          tooltip.style.left = `${event.clientX + 10}px`;
-          tooltip.style.top = `${event.clientY - 10}px`;
+          tooltip.style.left = `${x + 10}px`;
+          tooltip.style.top = `${y - 10}px`;
           tooltip.innerHTML = `
             <div class="bg-gray-800 text-white p-2 rounded shadow-lg border border-gray-600 text-sm">
               <div class="font-semibold">${hoveredTrade.memberName}</div>
@@ -207,8 +220,10 @@ export default function StockPriceChart({
               <div class="text-gray-400">Price: $${hoveredTrade.price.toFixed(2)}</div>
             </div>
           `;
+          canvas.style.cursor = 'pointer';
         } else {
           tooltip.style.display = 'none';
+          canvas.style.cursor = 'crosshair';
         }
       }
     };
@@ -218,16 +233,33 @@ export default function StockPriceChart({
       if (tooltip) {
         tooltip.style.display = 'none';
       }
+      canvas.style.cursor = 'crosshair';
+    };
+
+    const handleClick = (event: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const hoveredTrade = findHoveredTrade(x, y);
+      if (hoveredTrade) {
+        if (clickTarget === 'asset' && typeof assetId === 'number') {
+          router.push(`/stocks/${assetId}`);
+        } else if (hoveredTrade.memberId) {
+          router.push(`/members/${hoveredTrade.memberId}`);
+        }
+      }
     };
 
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mouseleave', handleMouseLeave);
+    canvas.addEventListener('click', handleClick);
 
     return () => {
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
+      canvas.removeEventListener('click', handleClick);
     };
-  }, [priceData, tradeData, ticker, height]);
+  }, [priceData, tradeData, ticker, height, clickTarget, assetId, router]);
 
   const totalBuys = tradeData.filter(t => t.type === 'buy').length;
   const totalSells = tradeData.filter(t => t.type === 'sell').length;
@@ -258,14 +290,13 @@ export default function StockPriceChart({
           className="w-full border border-gray-600 rounded cursor-crosshair"
           style={{ height: `${height}px` }}
         />
+        {/* Tooltip (positioned relative to container) */}
+        <div 
+          ref={tooltipRef}
+          className="absolute pointer-events-none z-10"
+          style={{ display: 'none' }}
+        />
       </div>
-      
-      {/* Tooltip */}
-      <div 
-        ref={tooltipRef}
-        className="absolute pointer-events-none z-10"
-        style={{ display: 'none' }}
-      />
       
       <div className="mt-4 text-sm text-gray-400">
         <p>• Hover over pins to see trade details</p>

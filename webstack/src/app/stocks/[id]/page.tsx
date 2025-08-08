@@ -12,6 +12,7 @@ import {
   getDateRangeFromTransactions, 
   generateTradeDataPoints 
 } from '@/src/lib/priceDataService';
+import type { PriceDataPoint, TradeDataPoint } from '@/src/lib/priceDataService';
 
 // Force dynamic rendering to avoid build-time database queries
 export const dynamic = 'force-dynamic';
@@ -157,12 +158,15 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
 
   const { stock, totalVolume, totalTrades, buyTransactions, sellTransactions, topTraders } = stockData;
 
-  // Generate chart data (only if we have transactions)
-  let priceData, tradeData;
+  // Generate chart data using static JSON or DB; show unavailable if none
+  let priceData: PriceDataPoint[] = [];
+  let tradeData: TradeDataPoint[] = [];
   if (recentTransactions.length > 0) {
     const dateRange = getDateRangeFromTransactions(recentTransactions);
     priceData = await getPriceDataForDateRange(stock.ticker || 'UNKNOWN', dateRange.start, dateRange.end);
-    tradeData = generateTradeDataPoints(recentTransactions, priceData);
+    if (priceData.length > 0) {
+      tradeData = generateTradeDataPoints(recentTransactions, priceData);
+    }
   }
 
   const pageEnd = performance.now();
@@ -212,7 +216,7 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
         </div>
 
         {/* Charts Section */}
-        {priceData && tradeData && (
+        {priceData && priceData.length > 0 ? (
           <div className="mb-8 space-y-8">
             <StockPriceChart 
               priceData={priceData}
@@ -225,6 +229,12 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
               ticker={stock.ticker || 'UNKNOWN'}
               height={300}
             />
+          </div>
+        ) : (
+          <div className="mb-8">
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 text-gray-300">
+              Price/volume data unavailable for {stock.ticker}. Check back later.
+            </div>
           </div>
         )}
 

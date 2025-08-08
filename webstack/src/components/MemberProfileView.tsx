@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import MemberProfileCard from "@/src/components/MemberProfileCard";
 import TradesTable from "@/src/components/TradesTable";
-import MemberTradingCharts from "@/src/components/MemberTradingCharts";
+import MemberTradingCharts from "./MemberTradingCharts";
 import type { Members as Member, Transactions, Assets } from '@prisma/client';
 
 // Define the type for a trade that includes its related asset
@@ -101,7 +101,7 @@ export default function MemberProfileView({ member, trades }: MemberProfileViewP
           
           {/* Trading Charts Section */}
           <div className="mt-8">
-            <MemberTradingCharts trades={trades} memberName={member.name} />
+            <MemberTradingCharts trades={trades} />
           </div>
         </div>
       </div>

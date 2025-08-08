@@ -27,6 +27,13 @@ export default function VolumeChart({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Resolve CSS custom properties to actual colors
+    const styles = getComputedStyle(document.documentElement);
+    const colorBlue = (styles.getPropertyValue('--c-blue') || '#3b82f6').trim();
+    const colorTeal = (styles.getPropertyValue('--c-teal') || '#14b8a6').trim();
+    const colorRed = (styles.getPropertyValue('--c-red') || '#ef4444').trim();
+    const colorGray = (styles.getPropertyValue('--c-gray') || '#9ca3af').trim();
+
     // Set canvas size
     const rect = container.getBoundingClientRect();
     canvas.width = rect.width;
@@ -92,9 +99,9 @@ export default function VolumeChart({
       // Volume bar color based on price change
       if (index > 0) {
         const prevPrice = priceData[index - 1].price;
-        ctx.fillStyle = point.price > prevPrice ? 'var(--c-teal)' : 'var(--c-red)';
+        ctx.fillStyle = point.price > prevPrice ? colorTeal : colorRed;
       } else {
-        ctx.fillStyle = 'var(--c-gray)';
+        ctx.fillStyle = colorGray;
       }
       
       ctx.globalAlpha = 0.7;
@@ -103,7 +110,7 @@ export default function VolumeChart({
     });
 
     // Draw price line
-    ctx.strokeStyle = 'var(--c-blue)';
+    ctx.strokeStyle = colorBlue;
     ctx.lineWidth = 3;
     ctx.beginPath();
     
@@ -122,8 +129,8 @@ export default function VolumeChart({
 
     // Draw price line with gradient
     const gradient = ctx.createLinearGradient(0, margin.top, 0, canvas.height - margin.bottom);
-    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
+    gradient.addColorStop(0, `${colorBlue}33`); // ~0.2 alpha
+    gradient.addColorStop(1, `${colorBlue}0d`); // ~0.05 alpha
     
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -148,7 +155,7 @@ export default function VolumeChart({
     ctx.fill();
 
     // Draw axes labels
-    ctx.fillStyle = 'var(--c-gray)';
+    ctx.fillStyle = colorGray;
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     
@@ -238,8 +245,10 @@ export default function VolumeChart({
       if (tooltip) {
         if (closestPoint) {
           tooltip.style.display = 'block';
-          tooltip.style.left = `${event.clientX + 10}px`;
-          tooltip.style.top = `${event.clientY - 10}px`;
+          // position relative to container
+          const localY = yPriceScale(closestPoint.price);
+          tooltip.style.left = `${x + 10}px`;
+          tooltip.style.top = `${localY - 10}px`;
           tooltip.innerHTML = `
             <div class="bg-gray-800 text-white p-2 rounded shadow-lg border border-gray-600 text-sm">
               <div class="font-semibold">${ticker}</div>
@@ -304,14 +313,13 @@ export default function VolumeChart({
           className="w-full border border-gray-600 rounded cursor-crosshair"
           style={{ height: `${height}px` }}
         />
+        {/* Tooltip positioned relative to container */}
+        <div 
+          ref={tooltipRef}
+          className="absolute pointer-events-none z-10"
+          style={{ display: 'none' }}
+        />
       </div>
-      
-      {/* Tooltip */}
-      <div 
-        ref={tooltipRef}
-        className="absolute pointer-events-none z-10"
-        style={{ display: 'none' }}
-      />
       
       <div className="mt-4 text-sm text-gray-400">
         <p>• Hover over the chart to see detailed price and volume data</p>

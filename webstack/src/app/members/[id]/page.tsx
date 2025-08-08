@@ -41,7 +41,12 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           }
         },
         include: {
-          Assets: true
+          Assets: true,
+          Filings: {
+            include: {
+              Members: true
+            }
+          }
         },
         orderBy: {
           transaction_date: 'desc'
