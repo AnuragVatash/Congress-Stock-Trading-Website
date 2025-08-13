@@ -1,0 +1,25 @@
+# Daily PTR Checker Requirements
+# Python 3.8+
+
+# Web scraping
+selenium==4.17.2
+beautifulsoup4==4.12.3
+requests==2.31.0
+
+# PDF processing
+PyMuPDF==1.23.9
+fitz==0.0.1.dev2
+
+# Database
+supabase==2.3.0
+python-dotenv==1.0.0
+
+# Scheduling
+schedule==1.2.0
+
+# Data processing
+pandas==2.1.4
+numpy==1.24.3
+
+# Utilities
+python-dateutil==2.8.2
